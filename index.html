@@ -282,7 +282,8 @@ async function pgSales(){
         <button class="btn ${salesView==='today'?'btn-primary':'btn-ghost'}" onclick="salesView='today';pgSales()">📋 Today's Actions</button>
         <button class="btn ${salesView==='pipeline'?'btn-primary':'btn-ghost'}" onclick="salesView='pipeline';pgSales()">🔄 Pipeline</button>
         <div style="margin-left:auto;display:flex;gap:8px">
-          <button class="btn btn-ghost btn-sm" onclick="simulateAngiLead()" title="Simulate an Angi lead coming in by email">📧 Test Angi Lead</button>
+          <button class="btn btn-ghost btn-sm" onclick="showEmailScanner()">📧 Email Scanner</button>
+          <button class="btn btn-ghost btn-sm" onclick="simulateAngiLead()" title="Simulate an Angi lead coming in by email">🧪 Test Angi Lead</button>
           <button class="btn btn-primary" onclick="showLeadForm()">+ New Lead</button>
         </div>
       </div>
@@ -1657,6 +1658,254 @@ async function sendMsg(){
   try{await ins('messages',{body,job_id:$$('msg-job').value||null});toast('Sent!');$$('msg-body').value='';pgMsgs();}catch(e){toast(e.message,'error');}
 }
 
+// GMAIL INTEGRATION
+const GMAIL_CLIENT_ID='760633955848-6rrcev2o7kcpj0ehelhfjvf57art33cn.apps.googleusercontent.com';
+const GMAIL_SCOPES='https://www.googleapis.com/auth/gmail.readonly';
+let gmailToken=localStorage.getItem('gmail_token')||null;
+let gmailTokenExpiry=localStorage.getItem('gmail_token_expiry')||null;
+
+function gmailIsConnected(){
+  return gmailToken && gmailTokenExpiry && Date.now()<parseInt(gmailTokenExpiry);
+}
+
+function connectGmail(){
+  const params=new URLSearchParams({
+    client_id:GMAIL_CLIENT_ID,
+    redirect_uri:'https://feishy-hub.github.io/corestone-os',
+    response_type:'token',
+    scope:GMAIL_SCOPES,
+    prompt:'consent'
+  });
+  // Save current page so we come back to email scanner after auth
+  localStorage.setItem('gmail_return','email_scanner');
+  window.location.href='https://accounts.google.com/o/oauth2/v2/auth?'+params.toString();
+}
+
+function checkGmailCallback(){
+  // Check if we're returning from Google OAuth
+  const hash=window.location.hash;
+  if(hash&&hash.includes('access_token')){
+    const params=new URLSearchParams(hash.substring(1));
+    const token=params.get('access_token');
+    const expiresIn=params.get('expires_in');
+    if(token){
+      gmailToken=token;
+      gmailTokenExpiry=String(Date.now()+parseInt(expiresIn)*1000);
+      localStorage.setItem('gmail_token',token);
+      localStorage.setItem('gmail_token_expiry',gmailTokenExpiry);
+      // Clean up URL
+      history.replaceState(null,'',window.location.pathname);
+      toast('✅ Gmail connected! Scanning for Angi leads...');
+      setTimeout(()=>go('sales'),1000);
+    }
+  }
+}
+
+async function scanGmailForLeads(){
+  if(!gmailIsConnected()){connectGmail();return;}
+  const c=$$('gmail-scan-results');
+  if(c)c.innerHTML='<div class="loading"><div class="spinner"></div>Scanning Gmail for Angi leads...</div>';
+
+  try{
+    // Search Gmail for Angi lead emails
+    const searchRes=await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=from:leads@angi.com OR from:noreply@angi.com OR subject:new+lead&maxResults=10`,
+      {headers:{Authorization:`Bearer ${gmailToken}`}}
+    );
+    const searchData=await searchRes.json();
+
+    if(!searchData.messages||searchData.messages.length===0){
+      if(c)c.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No Angi emails found</div><div class="empty-sub">Forward an Angi lead email to your Gmail and click Scan again. Or paste an Angi lead email below.</div>
+        <div style="margin-top:16px">
+          <label>Paste Angi Email Text Here</label>
+          <textarea id="paste-lead-email" style="min-height:120px" placeholder="Paste the full Angi lead email text here..."></textarea>
+          <button class="btn btn-primary" style="margin-top:8px" onclick="processEmailText()">🤖 AI Process This Email</button>
+        </div></div>`;
+      return;
+    }
+
+    // Get full content of first 5 emails
+    const emails=[];
+    for(const msg of searchData.messages.slice(0,5)){
+      const detail=await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+        {headers:{Authorization:`Bearer ${gmailToken}`}}
+      );
+      const data=await detail.json();
+      const subject=data.payload?.headers?.find(h=>h.name==='Subject')?.value||'No subject';
+      const from=data.payload?.headers?.find(h=>h.name==='From')?.value||'Unknown';
+      const date=data.payload?.headers?.find(h=>h.name==='Date')?.value||'';
+      // Extract body text
+      let body='';
+      const extractBody=(part)=>{
+        if(part.body?.data){
+          try{body+=atob(part.body.data.replace(/-/g,'+').replace(/_/g,'/'));}catch(e){}
+        }
+        if(part.parts)part.parts.forEach(extractBody);
+      };
+      extractBody(data.payload);
+      // Strip HTML
+      const cleanBody=body.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0,2000);
+      emails.push({id:msg.id,subject,from,date,body:cleanBody});
+    }
+
+    if(c)c.innerHTML=`
+      <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:12px">Found ${emails.length} Angi/Lead Emails</div>
+      ${emails.map((e,i)=>`
+        <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+            <div>
+              <div style="font-weight:700;font-size:13px">${e.subject}</div>
+              <div style="font-size:11px;color:var(--muted)">${e.from} · ${e.date}</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="processEmailToLead(${i})">🤖 Import as Lead</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6;background:#f8fafc;padding:8px;border-radius:6px;max-height:80px;overflow:hidden">${e.body.substring(0,300)}...</div>
+        </div>`).join('')}
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Or paste any lead email manually:</div>
+        <textarea id="paste-lead-email" style="min-height:100px" placeholder="Paste email text here..."></textarea>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="processEmailText()">🤖 Process Pasted Email</button>
+      </div>`;
+
+    // Store emails for processing
+    window._scannedEmails=emails;
+
+  }catch(e){
+    if(c)c.innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Gmail Error</div><div class="empty-sub">${e.message}</div>
+      <button class="btn btn-ghost" onclick="gmailToken=null;localStorage.removeItem('gmail_token');connectGmail()">Reconnect Gmail</button></div>`;
+  }
+}
+
+async function processEmailToLead(index){
+  const email=window._scannedEmails?.[index];
+  if(!email){toast('Email not found','error');return;}
+  await processEmailText(email.body,email.subject);
+}
+
+async function processEmailText(body=null,subject=null){
+  const text=body||$$('paste-lead-email')?.value;
+  if(!text||text.trim().length<10){toast('Please paste the email text first','error');return;}
+
+  const c=$$('gmail-scan-results');
+  if(c)c.innerHTML='<div class="loading"><div class="spinner"></div>🤖 AI reading email and extracting lead info...</div>';
+
+  try{
+    const extracted=await ai(`You are extracting lead information from an Angi or other lead generation email for Corestone Developers, a construction company in Hudson Valley NY.
+
+EMAIL TEXT:
+${text}
+
+Extract ALL available information and return ONLY valid JSON (no markdown):
+{
+  "client_name": "Full name of the potential client",
+  "phone": "Phone number or empty string",
+  "email": "Email address or empty string",
+  "address": "Full project address or empty string",
+  "city": "City and state",
+  "job_type": "Type of construction project - use one of: Custom Home Build, Full Home Renovation, Kitchen Remodel, Bathroom Remodel, Addition / Extension, Basement Finish, Deck / Patio, Garage / ADU, Roofing, Siding & Exterior, Commercial Build-Out, Other",
+  "estimated_value": 0,
+  "timeline": "When they want to start",
+  "notes": "Everything else they said - their full message, details, requirements",
+  "owns_property": "yes/no/own land/unknown",
+  "competing_bids": "unknown/yes/no",
+  "lead_source": "Angi",
+  "confidence": "high/medium/low - how confident you are in the extraction"
+}`,'Return only valid JSON. No markdown. No explanation.');
+
+    const clean=extracted.replace(/```json|```/g,'').trim();
+    const data=JSON.parse(clean);
+
+    // Show preview before creating
+    if(c)c.innerHTML=`
+      <div style="background:#e8f5e9;border:2px solid var(--green);border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;margin-bottom:10px">✅ AI Extracted This Lead Info</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
+          <div><span style="color:var(--muted);font-size:11px">NAME</span><br><strong>${data.client_name||'Unknown'}</strong></div>
+          <div><span style="color:var(--muted);font-size:11px">PHONE</span><br><strong>${data.phone||'Not found'}</strong></div>
+          <div><span style="color:var(--muted);font-size:11px">EMAIL</span><br><strong>${data.email||'Not found'}</strong></div>
+          <div><span style="color:var(--muted);font-size:11px">JOB TYPE</span><br><strong>${data.job_type||'Unknown'}</strong></div>
+          <div><span style="color:var(--muted);font-size:11px">ADDRESS</span><br><strong>${data.address||data.city||'Not found'}</strong></div>
+          <div><span style="color:var(--muted);font-size:11px">TIMELINE</span><br><strong>${data.timeline||'Unknown'}</strong></div>
+        </div>
+        ${data.notes?`<div style="margin-top:10px;font-size:12px;color:var(--muted);background:#fff;padding:8px;border-radius:6px">${data.notes.substring(0,200)}</div>`:''}
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="createLeadFromEmail(${JSON.stringify(data).replace(/"/g,'&quot;')})">✅ Create Lead + Generate AI Script</button>
+          <button class="btn btn-ghost" onclick="scanGmailForLeads()">← Back</button>
+        </div>
+      </div>`;
+
+  }catch(e){
+    if(c)c.innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Could not read email</div><div class="empty-sub">${e.message}</div>
+      <button class="btn btn-ghost" onclick="scanGmailForLeads()">← Try Again</button></div>`;
+  }
+}
+
+async function createLeadFromEmail(data){
+  toast('Creating lead...');
+  try{
+    const r=await ins('leads',{
+      client_name:data.client_name||'Unknown',
+      phone:data.phone||'',
+      email:data.email||'',
+      address:data.address||data.city||'',
+      job_type:data.job_type||'Other',
+      estimated_value:data.estimated_value||0,
+      timeline:data.timeline||'Unknown',
+      notes:data.notes||'',
+      owns_property:data.owns_property||'unknown',
+      competing_bids:data.competing_bids||'unknown',
+      lead_source:'Angi',
+      stage:'new',
+      next_followup:new Date(Date.now()+2*3600000).toISOString()
+    });
+    const saved=r[0];
+    toast('✅ Lead created! Generating AI script...');
+    if(saved?.id){
+      await generateLeadAI(saved.id,data);
+      $$('email-scanner-modal')?.remove();
+      go('sales');
+      setTimeout(()=>leadDetail(saved.id),1500);
+    }
+  }catch(e){toast(e.message,'error');}
+}
+
+function showEmailScanner(){
+  if($$('email-scanner-modal'))return;
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="email-scanner-modal">
+      <div class="form-modal" style="max-width:640px">
+        <div class="form-header">
+          <div>
+            <div class="form-title">📧 Email Lead Scanner</div>
+            <div style="font-size:12px;color:var(--muted)">Scan Gmail for Angi leads or paste an email</div>
+          </div>
+          <button class="form-close" onclick="$$('email-scanner-modal').remove()">×</button>
+        </div>
+        <div class="form-body">
+          ${gmailIsConnected()?
+            `<div style="background:#e8f5e9;border:1px solid var(--green);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+              <span style="color:var(--green)">✅</span>
+              <span style="font-size:13px;color:var(--green);font-weight:600">Gmail connected</span>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="scanGmailForLeads()">Scan Now</button>
+            </div>`:
+            `<div style="background:#fff3e0;border:1px solid var(--amber);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">Connect Gmail to scan automatically</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Click below to authorize Corestone OS to read your Gmail and find Angi leads</div>
+              <button class="btn btn-primary" onclick="connectGmail()">🔗 Connect Gmail Account</button>
+            </div>`}
+          <div style="margin-bottom:14px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Or Paste Any Lead Email</div>
+            <textarea id="paste-lead-email" style="min-height:140px" placeholder="Paste the full Angi lead email text here — name, phone, address, project details..."></textarea>
+            <button class="btn btn-primary" style="margin-top:8px" onclick="processEmailText()">🤖 AI Extract & Create Lead</button>
+          </div>
+          <div id="gmail-scan-results"></div>
+        </div>
+      </div>
+    </div>`);
+  if(gmailIsConnected())setTimeout(()=>scanGmailForLeads(),300);
+}
+
 // GATEKEEPER
 async function pgGK(){
   try{
@@ -1749,6 +1998,7 @@ function saveSettings(){
 }
 function pgNotFound(){$$('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div><div class="empty-title">Coming Soon</div></div>';}
 
+checkGmailCallback();
 go('dashboard');
 </script>
 </body>
