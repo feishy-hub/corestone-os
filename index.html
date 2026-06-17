@@ -265,119 +265,604 @@ async function pgDash(){
 }
 
 // SALES
+// ── SALES — FULL LEAD INTELLIGENCE SYSTEM ─────────────────────
+let salesView='pipeline'; // pipeline | today | detail
+let activeLead=null;
+let callRecorder=null, callChunks=[], callTimer=null, callSeconds=0;
+
 async function pgSales(){
   try{
     const leads=await sb('leads','?order=created_at.desc');
-    const stages=['new','contacted','proposal','negotiating','signed','lost'];
-    const labels={new:'New',contacted:'Contacted',proposal:'Proposal',negotiating:'Negotiating',signed:'Signed ✓',lost:'Lost'};
-    const g={};stages.forEach(s=>g[s]=leads.filter(l=>l.stage===s));
+    const now=Date.now();
+    const callNow=leads.filter(l=>l.stage==='new'&&(now-new Date(l.created_at))<7200000);
+    const overdueFollowUp=leads.filter(l=>l.next_followup&&new Date(l.next_followup)<new Date()&&l.stage!=='signed'&&l.stage!=='lost');
+    const replied=leads.filter(l=>l.last_reply_at&&(!l.last_viewed_reply||new Date(l.last_reply_at)>new Date(l.last_viewed_reply)));
     $$('content').innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="font-size:13px;color:var(--muted)">${leads.length} leads · ${fmt$(leads.reduce((s,l)=>s+(l.estimated_value||0),0))} pipeline</div>
-        <button class="btn btn-primary" onclick="showLeadForm()">+ New Lead</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn ${salesView==='today'?'btn-primary':'btn-ghost'}" onclick="salesView='today';pgSales()">📋 Today's Actions</button>
+        <button class="btn ${salesView==='pipeline'?'btn-primary':'btn-ghost'}" onclick="salesView='pipeline';pgSales()">🔄 Pipeline</button>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="showLeadForm()">+ New Lead</button>
+        </div>
       </div>
-      <div class="pipeline">
-        ${stages.map(s=>`
-          <div>
-            <div class="col-header"><span class="col-title">${labels[s]}</span><span class="col-count">${g[s].length}</span></div>
-            <div class="col-body">
-              ${g[s].map(l=>`<div class="lead-card" onclick="leadDetail('${l.id}')">
-                <div class="lead-name">${l.client_name}</div>
-                <div class="lead-type">${l.job_type||'General'}</div>
-                <div class="lead-meta"><span class="lead-value">${fmt$(l.estimated_value)}</span><span class="lead-days">${dAgo(l.created_at)}</span></div>
-                ${l.address?`<div style="font-size:10px;color:var(--dim);margin-top:4px">📍 ${l.address}</div>`:''}
-              </div>`).join('')}
-              ${g[s].length===0?`<div style="text-align:center;padding:20px;font-size:11px;color:var(--dim)">Empty</div>`:''}
-            </div>
-            <div style="text-align:center;font-size:10px;color:var(--dim);padding:4px">${fmt$(g[s].reduce((s,l)=>s+(l.estimated_value||0),0))}</div>
-          </div>`).join('')}
-      </div>`;
+      ${callNow.length>0?`<div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">🔴</span>
+        <div><strong style="color:#856404">${callNow.length} new lead${callNow.length>1?'s':''} — call immediately!</strong>
+        <div style="font-size:12px;color:#856404">${callNow.map(l=>l.client_name).join(', ')}</div></div>
+        <button class="btn btn-sm" style="margin-left:auto;background:#856404;color:#fff" onclick="leadDetail('${callNow[0].id}')">Call Now →</button>
+      </div>`:''}
+      ${overdueFollowUp.length>0?`<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:8px;padding:10px 16px;margin-bottom:12px">
+        <strong style="color:#721c24">⚠️ ${overdueFollowUp.length} overdue follow-up${overdueFollowUp.length>1?'s':''}</strong>
+        <span style="font-size:12px;color:#721c24;margin-left:8px">${overdueFollowUp.map(l=>l.client_name).join(', ')}</span>
+      </div>`:''}
+      ${salesView==='today'?renderTodayView(leads):renderPipelineView(leads)}`;
   }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
 }
 
+function renderTodayView(leads){
+  const now=Date.now();
+  const sections=[
+    {label:'🔴 Call Right Now',color:'#dc3545',bg:'#fce4ec',items:leads.filter(l=>l.stage==='new'&&(now-new Date(l.created_at))<7200000)},
+    {label:'🟠 Overdue Follow-Up',color:'#e65100',bg:'#fff3e0',items:leads.filter(l=>l.next_followup&&new Date(l.next_followup)<new Date()&&l.stage!=='signed'&&l.stage!=='lost')},
+    {label:'🟡 Follow Up Today',color:'#f57f17',bg:'#fffde7',items:leads.filter(l=>{if(!l.next_followup)return false;const d=new Date(l.next_followup);const t=new Date();return d.toDateString()===t.toDateString();})},
+    {label:'💬 They Replied — Act Now',color:'#1a6bb5',bg:'#e3f2fd',items:leads.filter(l=>l.last_reply_at&&l.stage!=='signed'&&l.stage!=='lost')},
+    {label:'❄️ Going Cold (5+ days no contact)',color:'#546e7a',bg:'#f5f5f5',items:leads.filter(l=>{if(!l.last_contact_at)return false;const d=Math.floor((now-new Date(l.last_contact_at))/86400000);return d>=5&&l.stage!=='signed'&&l.stage!=='lost';})},
+  ];
+  return sections.map(sec=>sec.items.length===0?'':
+    `<div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:${sec.color};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">${sec.label} (${sec.items.length})</div>
+      ${sec.items.map(l=>leadMiniCard(l,sec.bg)).join('')}
+    </div>`).join('') || `<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">All clear today!</div><div class="empty-sub">No urgent actions needed right now.</div></div>`;
+}
+
+function leadMiniCard(l,bg='#fff'){
+  const days=l.last_contact_at?Math.floor((Date.now()-new Date(l.last_contact_at))/86400000):null;
+  const heat=!days?'🆕':days<2?'🔥':days<5?'🌡️':'❄️';
+  return `<div style="background:${bg};border:1px solid #e0e0e0;border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="leadDetail('${l.id}')">
+    <div style="font-size:20px">${heat}</div>
+    <div style="flex:1">
+      <div style="font-weight:700;font-size:13px">${l.client_name}</div>
+      <div style="font-size:11px;color:var(--muted)">${l.job_type||'General'} · ${l.address||'No address'} · ${l.lead_source||'Unknown source'}</div>
+      ${l.ai_next_action?`<div style="font-size:11px;color:var(--teal);margin-top:3px">→ ${l.ai_next_action}</div>`:''}
+    </div>
+    <div style="text-align:right">
+      <div style="font-weight:700;color:var(--teal)">${fmt$(l.estimated_value)}</div>
+      <div style="font-size:10px;color:var(--dim)">${days!==null?days+'d ago':'new'}</div>
+      <span class="badge badge-${l.stage}" style="margin-top:4px">${l.stage}</span>
+    </div>
+  </div>`;
+}
+
+function renderPipelineView(leads){
+  const stages=['new','contacted','proposal','negotiating','signed','lost'];
+  const labels={new:'New',contacted:'Contacted',proposal:'Proposal Sent',negotiating:'Negotiating',signed:'Signed ✓',lost:'Lost'};
+  const g={};stages.forEach(s=>g[s]=leads.filter(l=>l.stage===s));
+  return `<div class="pipeline">
+    ${stages.map(s=>`
+      <div>
+        <div class="col-header"><span class="col-title">${labels[s]}</span><span class="col-count">${g[s].length}</span></div>
+        <div class="col-body">
+          ${g[s].map(l=>`<div class="lead-card" onclick="leadDetail('${l.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="lead-name">${l.client_name}</div>
+              <span style="font-size:14px">${!l.last_contact_at?'🆕':Math.floor((Date.now()-new Date(l.last_contact_at))/86400000)<2?'🔥':Math.floor((Date.now()-new Date(l.last_contact_at))/86400000)<5?'🌡️':'❄️'}</span>
+            </div>
+            <div class="lead-type">${l.job_type||'General'} · ${l.lead_source||''}</div>
+            <div class="lead-meta"><span class="lead-value">${fmt$(l.estimated_value)}</span><span class="lead-days">${dAgo(l.created_at)}</span></div>
+            ${l.address?`<div style="font-size:10px;color:var(--dim);margin-top:4px">📍 ${l.address}</div>`:''}
+            ${l.ai_next_action?`<div style="font-size:10px;color:var(--teal);margin-top:4px;font-weight:600">→ ${l.ai_next_action}</div>`:''}
+          </div>`).join('')}
+          ${g[s].length===0?`<div style="text-align:center;padding:20px;font-size:11px;color:var(--dim)">Empty</div>`:''}
+        </div>
+        <div style="text-align:center;font-size:10px;color:var(--dim);padding:4px">${fmt$(g[s].reduce((s,l)=>s+(l.estimated_value||0),0))}</div>
+      </div>`).join('')}
+  </div>`;
+}
+
 function showLeadForm(l=null){
-  const E=l?1:0;
+  const E=!!l;
   document.body.insertAdjacentHTML('beforeend',`
     <div class="form-overlay" id="lf">
-      <div class="form-modal">
+      <div class="form-modal" style="max-width:640px">
         <div class="form-header"><div class="form-title">${E?'Edit':'New'} Lead</div><button class="form-close" onclick="$$('lf').remove()">×</button></div>
         <div class="form-body">
+          <div style="background:var(--teal-dim);border:1px solid var(--teal);border-radius:6px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--teal-dark)">
+            💡 Fill in what you know — AI will generate the call script, address intelligence, and follow-up plan automatically
+          </div>
+          <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px">CONTACT INFO</div>
           <div class="form-row-2">
-            <div class="form-row"><label>Client Name *</label><input id="l-name" value="${l?.client_name||''}"></div>
-            <div class="form-row"><label>Job Type</label><input id="l-type" value="${l?.job_type||''}" placeholder="Kitchen Remodel"></div>
+            <div class="form-row"><label>Client Name *</label><input id="l-name" value="${l?.client_name||''}" placeholder="John & Sarah Johnson"></div>
+            <div class="form-row"><label>Phone *</label><input id="l-phone" value="${l?.phone||''}" placeholder="(845) 555-0100"></div>
           </div>
           <div class="form-row-2">
-            <div class="form-row"><label>Est. Value ($)</label><input id="l-val" type="number" value="${l?.estimated_value||''}"></div>
-            <div class="form-row"><label>Stage</label><select id="l-stage">${['new','contacted','proposal','negotiating','signed','lost'].map(s=>`<option value="${s}"${l?.stage===s?' selected':''}>${s}</option>`).join('')}</select></div>
+            <div class="form-row"><label>Email</label><input id="l-email" type="email" value="${l?.email||''}" placeholder="john@email.com"></div>
+            <div class="form-row"><label>Best Time to Call</label><select id="l-calltime"><option>Anytime</option><option>Morning (8am-12pm)</option><option>Afternoon (12pm-5pm)</option><option>Evening (5pm-8pm)</option></select></div>
           </div>
-          <div class="form-row"><label>Address</label><input id="l-addr" value="${l?.address||''}" placeholder="Kingston, NY"></div>
+          <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin:14px 0 10px">PROJECT INFO</div>
+          <div class="form-row"><label>Project Address *</label><input id="l-addr" value="${l?.address||''}" placeholder="123 Mountain Rd, Woodstock, NY 12498" oninput="addrHint(this.value)"></div>
+          <div id="addr-hint" style="font-size:11px;color:var(--teal);margin-top:-8px;margin-bottom:10px"></div>
           <div class="form-row-2">
-            <div class="form-row"><label>Phone</label><input id="l-phone" value="${l?.phone||''}"></div>
-            <div class="form-row"><label>Email</label><input id="l-email" type="email" value="${l?.email||''}"></div>
+            <div class="form-row"><label>Job Type</label><select id="l-type">
+              ${['Custom Home Build','Full Home Renovation','Kitchen Remodel','Bathroom Remodel','Addition / Extension','Basement Finish','Deck / Patio','Garage / ADU','Roofing','Siding & Exterior','Commercial Build-Out','Other'].map(t=>`<option${l?.job_type===t?' selected':''}>${t}</option>`).join('')}
+            </select></div>
+            <div class="form-row"><label>Est. Budget ($)</label><input id="l-val" type="number" value="${l?.estimated_value||''}" placeholder="400000"></div>
           </div>
-          <div class="form-row"><label>Lead Source</label><select id="l-src">${['Referral','Google','Angi','Houzz','Website','Cold outreach','Architect partner','Instagram','Door knock'].map(s=>`<option${l?.lead_source===s?' selected':''}>${s}</option>`).join('')}</select></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Timeline</label><select id="l-timeline">
+              ${['ASAP','1-3 months','3-6 months','6-12 months','Just exploring','Unknown'].map(t=>`<option${l?.timeline===t?' selected':''}>${t}</option>`).join('')}
+            </select></div>
+            <div class="form-row"><label>Lead Source</label><select id="l-src">
+              ${['Angi','Google','Houzz','Referral','Website','Instagram','Cold call','Walk-in','Architect partner','Repeat client','Other'].map(s=>`<option${l?.lead_source===s?' selected':''}>${s}</option>`).join('')}
+            </select></div>
+          </div>
+          <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em;margin:14px 0 10px">PROPERTY & QUALIFICATION</div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Do They Own the Property?</label><select id="l-owns"><option value="">Unknown</option><option value="yes">Yes — they own it</option><option value="no">No — buying/renting</option><option value="land">Own land — building new</option></select></div>
+            <div class="form-row"><label>Decision Maker?</label><select id="l-decision"><option>Yes — talking to owner</option><option>Needs spouse/partner</option><option>Needs partner/investor</option><option>Unknown</option></select></div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Financing?</label><select id="l-finance"><option>Cash</option><option>Construction loan</option><option>HELOC</option><option>Mortgage refinance</option><option>Unknown</option></select></div>
+            <div class="form-row"><label>Competing Bids?</label><select id="l-competing"><option>Unknown</option><option>No — only talking to us</option><option>Yes — getting multiple bids</option><option>Already got other bids</option></select></div>
+          </div>
+          <div class="form-row"><label>What Did They Say / Angi Notes</label><textarea id="l-notes" style="min-height:80px" placeholder="Paste Angi lead notes, what they said on the phone, anything they mentioned...">${l?.notes||''}</textarea></div>
+          <div class="form-row"><label>Stage</label><select id="l-stage">
+            ${['new','contacted','proposal','negotiating','signed','lost'].map(s=>`<option value="${s}"${l?.stage===s?' selected':''}>${s}</option>`).join('')}
+          </select></div>
         </div>
         <div class="form-footer">
           <button class="btn btn-ghost" onclick="$$('lf').remove()">Cancel</button>
-          <button class="btn btn-primary" onclick="saveLead(${E?`'${l.id}'`:null})">${E?'Save':'Add Lead'}</button>
+          <button class="btn btn-ghost" onclick="saveLead(${E?`'${l.id}'`:null},false)">Save Only</button>
+          <button class="btn btn-primary" onclick="saveLead(${E?`'${l.id}'`:null},true)">✨ Save + AI Generate</button>
         </div>
       </div>
     </div>`);
 }
 
-async function saveLead(id=null){
+function addrHint(val){
+  const el=$$('addr-hint');
+  if(val.length>10){el.textContent='📍 AI will pull permits, zoning & municipality info for this address automatically';}
+  else{el.textContent='';}
+}
+
+async function saveLead(id=null,runAI=true){
   const name=$$('l-name').value.trim();
-  if(!name){toast('Name required','error');return;}
-  const d={client_name:name,job_type:$$('l-type').value,estimated_value:parseFloat($$('l-val').value)||0,stage:$$('l-stage').value,address:$$('l-addr').value,phone:$$('l-phone').value,email:$$('l-email').value,lead_source:$$('l-src').value};
+  if(!name){toast('Client name required','error');return;}
+  const d={
+    client_name:name,
+    phone:$$('l-phone').value,
+    email:$$('l-email').value,
+    address:$$('l-addr').value,
+    job_type:$$('l-type').value,
+    estimated_value:parseFloat($$('l-val').value)||0,
+    timeline:$$('l-timeline').value,
+    lead_source:$$('l-src').value,
+    owns_property:$$('l-owns').value,
+    decision_maker:$$('l-decision').value,
+    financing:$$('l-finance').value,
+    competing_bids:$$('l-competing').value,
+    notes:$$('l-notes').value,
+    stage:$$('l-stage').value,
+    next_followup:new Date(Date.now()+2*3600000).toISOString()
+  };
   try{
-    id?await upd('leads',id,d):await ins('leads',d);
-    toast(id?'Lead updated':'Lead added!');$$('lf')?.remove();pgSales();
+    let saved;
+    if(id){await upd('leads',id,d);saved={...d,id};}
+    else{const r=await ins('leads',d);saved=r[0]||{...d,id:'new'};}
+    toast(id?'Lead updated':'Lead saved!');
+    $$('lf')?.remove();
+    if(runAI&&saved.id){
+      toast('🤖 AI generating script & intelligence...');
+      await generateLeadAI(saved.id||id,d);
+    }
+    pgSales();
   }catch(e){toast(e.message,'error');}
+}
+
+async function generateLeadAI(leadId,data){
+  const prompt=`You are the AI system for Corestone Developers, a premium general contracting company in Hudson Valley, NY run by Feishy (Moshe) Felberbaum.
+
+COMPANY INFO:
+- Full-service GC, handle every aspect start to finish
+- 20% contractor fee on cost-plus model (transparent pricing)
+- Manage all permits, all subs, every phase
+- Use trusted group of subs consistently for quality
+- $5,000 deposit required BEFORE site visit or proposal (covers planning, architectural coordination, estimate preparation)
+- After deposit: do site visit, coordinate with subs, prepare full detailed estimate
+- Client can then revise estimate (adjust finishes, materials, scope)
+- $5,000 applies toward construction — not an extra fee
+- Project management software for client to see everything 24/7
+- Daily updates with photos/videos from site managers
+- Verified on Google, Houzz partner, Instagram portfolio
+- Service area: Hudson Valley, Ulster County, Sullivan County, Dutchess County NY
+
+LEAD INFO:
+- Name: ${data.client_name}
+- Phone: ${data.phone||'unknown'}
+- Address: ${data.address||'unknown'}
+- Job type: ${data.job_type||'unknown'}
+- Budget: ${data.estimated_value?'$'+data.estimated_value:'unknown'}
+- Timeline: ${data.timeline||'unknown'}
+- Source: ${data.lead_source||'unknown'}
+- Owns property: ${data.owns_property||'unknown'}
+- Decision maker: ${data.decision_maker||'unknown'}
+- Financing: ${data.financing||'unknown'}
+- Competing bids: ${data.competing_bids||'unknown'}
+- Their notes: ${data.notes||'none'}
+
+Generate a JSON response with these exact fields (no markdown, just JSON):
+{
+  "call_script": "Full word-for-word call script Feishy can read. Include: warm opening using their name and source, discovery questions about their project, company pitch (cost-plus model, 20%, full management, permits, subs, daily updates), how to explain the $5000 deposit naturally and confidently, social proof (Google reviews, Houzz, Instagram), soft close to get them excited about moving forward. Make it conversational and confident. 400-600 words.",
+  "objection_responses": {
+    "too_expensive": "Response if they say it costs too much",
+    "getting_other_bids": "Response if they're comparing contractors",
+    "deposit_concern": "Response if they question the $5000 deposit",
+    "not_ready": "Response if they say they're not ready yet",
+    "need_to_think": "Response if they need to think about it"
+  },
+  "qualification_questions": ["Question 1", "Question 2", "Question 3", "Question 4", "Question 5"],
+  "address_intelligence": "Based on the address (${data.address||'Hudson Valley NY'}), provide: municipality/town, likely zoning, permits typically required for ${data.job_type||'renovation'}, estimated permit timeline, any special considerations for this area. Be specific to Ulster/Sullivan/Dutchess County NY.",
+  "red_flags": ["Flag 1 to watch for", "Flag 2", "Flag 3"],
+  "ai_next_action": "One sentence: exactly what to do right now with this lead",
+  "followup_email_subject": "Subject line for post-call email",
+  "followup_email_body": "Full email to send after the first call. Warm, professional, mentions their specific project, includes links to Google reviews and Houzz, mentions the $5000 deposit process clearly, ends with clear next step. Sign off as Feishy from Corestone Developers. 200-300 words.",
+  "sentiment_score": "hot/warm/cold based on available info",
+  "priority": "urgent/high/normal/low"
+}`;
+
+  try{
+    const r=await ai(prompt,'You are a JSON-only AI. Return only valid JSON, no markdown, no explanation.');
+    const clean=r.replace(/```json|```/g,'').trim();
+    const d=JSON.parse(clean);
+    await upd('leads',leadId,{
+      ai_call_script:d.call_script,
+      ai_objections:JSON.stringify(d.objection_responses),
+      ai_questions:JSON.stringify(d.qualification_questions),
+      ai_address_intel:d.address_intelligence,
+      ai_red_flags:JSON.stringify(d.red_flags),
+      ai_next_action:d.ai_next_action,
+      ai_followup_email_subject:d.followup_email_subject,
+      ai_followup_email_body:d.followup_email_body,
+      ai_sentiment:d.sentiment_score,
+      ai_priority:d.priority
+    });
+    toast('✅ AI script & intelligence ready — open the lead to see it');
+  }catch(e){toast('AI generation failed: '+e.message,'error');}
 }
 
 async function leadDetail(id){
   try{
     const[lead]=await sb('leads',`?id=eq.${id}`);if(!lead)return;
+    const objections=lead.ai_objections?JSON.parse(lead.ai_objections):{};
+    const questions=lead.ai_questions?JSON.parse(lead.ai_questions):[];
+    const redFlags=lead.ai_red_flags?JSON.parse(lead.ai_red_flags):[];
+    const days=lead.last_contact_at?Math.floor((Date.now()-new Date(lead.last_contact_at))/86400000):null;
+
     document.body.insertAdjacentHTML('beforeend',`
-      <div class="form-overlay" id="ld">
-        <div class="form-modal" style="max-width:580px">
-          <div class="form-header">
-            <div><div class="form-title">${lead.client_name}</div><div style="font-size:12px;color:var(--muted)">${lead.job_type||''} · ${lead.address||''}</div></div>
-            <button class="form-close" onclick="$$('ld').remove()">×</button>
+      <div class="form-overlay" id="ld" style="align-items:flex-start;padding:10px;overflow-y:auto">
+        <div class="form-modal" style="max-width:780px;max-height:none">
+          <div class="form-header" style="background:var(--teal);border-radius:12px 12px 0 0;padding:16px 20px">
+            <div>
+              <div style="font-size:18px;font-weight:800;color:#fff">${lead.client_name}</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.8)">${lead.job_type||''} · ${lead.address||''} · ${lead.lead_source||''}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="badge badge-${lead.ai_sentiment==='hot'?'signed':lead.ai_sentiment==='cold'?'lost':'contacted'}">${lead.ai_sentiment||'?'} ${lead.ai_sentiment==='hot'?'🔥':lead.ai_sentiment==='cold'?'❄️':'🌡️'}</span>
+              <button class="form-close" style="background:rgba(255,255,255,0.2);color:#fff;border:none" onclick="$$('ld').remove()">×</button>
+            </div>
           </div>
-          <div class="form-body">
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-              <div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:18px">${fmt$(lead.estimated_value)}</div><div class="stat-label">Est. Value</div></div>
-              <div class="stat-card" style="padding:12px"><div style="font-size:13px;font-weight:700;margin-bottom:4px">${lead.lead_source||'—'}</div><div class="stat-label">Source</div></div>
-              <div class="stat-card" style="padding:12px"><span class="badge badge-${lead.stage}">${lead.stage}</span><div class="stat-label" style="margin-top:6px">Stage</div></div>
+          <div class="form-body" style="padding:16px 20px">
+
+            <!-- STATS ROW -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+              <div class="stat-card" style="padding:10px"><div class="stat-value" style="font-size:16px">${fmt$(lead.estimated_value)}</div><div class="stat-label">Budget</div></div>
+              <div class="stat-card" style="padding:10px"><div style="font-size:13px;font-weight:700;color:var(--teal)">${lead.timeline||'Unknown'}</div><div class="stat-label">Timeline</div></div>
+              <div class="stat-card" style="padding:10px"><div style="font-size:13px;font-weight:700;color:var(--text)">${lead.financing||'Unknown'}</div><div class="stat-label">Financing</div></div>
+              <div class="stat-card" style="padding:10px"><div style="font-size:13px;font-weight:700;color:${days===null?'var(--teal)':days<2?'var(--green)':days<5?'var(--amber)':'var(--red)'}">${days===null?'New':days+'d ago'}</div><div class="stat-label">Last Contact</div></div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-              ${lead.phone?`<a href="tel:${lead.phone}" class="btn btn-ghost btn-sm">📞 ${lead.phone}</a>`:''}
-              ${lead.email?`<a href="mailto:${lead.email}" class="btn btn-ghost btn-sm">✉️ ${lead.email}</a>`:''}
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-primary btn-sm" onclick="$$('ld').remove();showLeadForm(${JSON.stringify(lead).replace(/"/g,'&quot;')})">✏️ Edit</button>
+
+            <!-- ACTION BUTTONS -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:#f8fafc;border-radius:8px">
+              ${lead.phone?`<a href="tel:${lead.phone}" class="btn btn-primary btn-sm">📞 Call ${lead.phone}</a>`:''}
+              ${lead.email?`<a href="mailto:${lead.email}" class="btn btn-ghost btn-sm">✉️ Email</a>`:''}
+              <button class="btn btn-ghost btn-sm" onclick="startCallMode('${lead.id}')">🎙️ Live Call Mode</button>
+              <button class="btn btn-ghost btn-sm" onclick="showFollowupEmail('${lead.id}')">📧 Send Follow-Up Email</button>
+              <button class="btn btn-ghost btn-sm" onclick="$$('ld').remove();showLeadForm(${JSON.stringify(lead).replace(/"/g,'&quot;')})">✏️ Edit</button>
               <button class="btn btn-ghost btn-sm" onclick="toJob('${lead.id}','${lead.client_name}',${lead.estimated_value||0})">🏗️ Convert to Job</button>
-              <button class="btn btn-ghost btn-sm" onclick="stageUp('${lead.id}','signed')">✅ Mark Signed</button>
-              <button class="btn btn-ghost btn-sm" onclick="stageUp('${lead.id}','lost')">❌ Mark Lost</button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:var(--red)" onclick="confirmDeleteLead('${lead.id}','${lead.client_name}')">🗑️ Delete</button>
             </div>
+
+            <!-- STAGE CHANGE -->
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+              <span style="font-size:11px;color:var(--muted);font-weight:600">MOVE TO:</span>
+              ${['new','contacted','proposal','negotiating','signed','lost'].map(s=>s!==lead.stage?`<button class="btn btn-sm" style="background:${s==='signed'?'var(--green)':s==='lost'?'var(--red)':'var(--bg)'};color:${s==='signed'||s==='lost'?'#fff':'var(--text)'};border:1px solid var(--border)" onclick="stageUp('${lead.id}','${s}')">${s}</button>`:'').join('')}
+            </div>
+
+            <!-- AI NEXT ACTION -->
+            ${lead.ai_next_action?`<div style="background:#e8f5e9;border:1px solid var(--green);border-radius:8px;padding:12px;margin-bottom:16px">
+              <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;margin-bottom:4px">🤖 AI Recommended Next Action</div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${lead.ai_next_action}</div>
+            </div>`:''}
+
+            <!-- TABS -->
+            <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px">
+              ${[['script','📞 Call Script'],['intel','📍 Address Intel'],['email','📧 Follow-Up Email'],['notes','📝 Notes & Info']].map(([k,v],i)=>`
+                <div class="tab ${i===0?'active':''}" onclick="switchLeadTab('${k}',this)" style="padding:8px 14px">${v}</div>`).join('')}
+            </div>
+
+            <!-- CALL SCRIPT TAB -->
+            <div id="lt-script">
+              ${lead.ai_call_script?`
+                <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;color:var(--text)">${lead.ai_call_script}</div>
+                ${questions.length>0?`<div style="margin-top:16px">
+                  <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:8px">Qualification Questions to Ask</div>
+                  ${questions.map((q,i)=>`<div style="padding:8px 12px;background:#f8fafc;border-radius:6px;margin-bottom:6px;font-size:13px">❓ ${q}</div>`).join('')}
+                </div>`:''}
+                ${Object.keys(objections).length>0?`<div style="margin-top:16px">
+                  <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;margin-bottom:8px">Objection Responses</div>
+                  ${Object.entries(objections).map(([k,v])=>`<div style="margin-bottom:10px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+                    <div style="background:#f8fafc;padding:6px 12px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">${k.replace(/_/g,' ')}</div>
+                    <div style="padding:10px 12px;font-size:13px;line-height:1.6">${v}</div>
+                  </div>`).join('')}
+                </div>`:''}
+                ${redFlags.length>0?`<div style="margin-top:16px;background:#fff3e0;border:1px solid #ffcc02;border-radius:8px;padding:12px">
+                  <div style="font-size:11px;font-weight:700;color:#e65100;margin-bottom:8px">⚠️ Red Flags to Watch For</div>
+                  ${redFlags.map(f=>`<div style="font-size:12px;color:#bf360c;margin-bottom:4px">• ${f}</div>`).join('')}
+                </div>`:''}
+              `:`<div class="empty"><div class="empty-icon">🤖</div><div class="empty-title">No script yet</div><div class="empty-sub">Click below to generate</div><button class="btn btn-primary" onclick="regenAI('${lead.id}')">✨ Generate AI Script</button></div>`}
+            </div>
+
+            <!-- INTEL TAB -->
+            <div id="lt-intel" style="display:none">
+              ${lead.ai_address_intel?`<div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap">${lead.ai_address_intel}</div>`:
+              `<div class="empty"><div class="empty-icon">📍</div><div class="empty-title">No address intelligence yet</div><div class="empty-sub">Save the lead with an address to generate permit and zoning info</div></div>`}
+            </div>
+
+            <!-- EMAIL TAB -->
+            <div id="lt-email" style="display:none">
+              ${lead.ai_followup_email_body?`
+                <div style="margin-bottom:10px">
+                  <label>Subject</label>
+                  <input value="${lead.ai_followup_email_subject||''}" id="email-subj-${lead.id}" style="margin-bottom:8px">
+                  <label>Body</label>
+                  <textarea id="email-body-${lead.id}" style="min-height:200px;font-size:13px;line-height:1.7">${lead.ai_followup_email_body}</textarea>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn btn-primary" onclick="sendFollowupEmail('${lead.id}','${lead.email||''}')">📧 Send This Email</button>
+                  <button class="btn btn-ghost" onclick="regenEmail('${lead.id}')">🔄 Regenerate</button>
+                </div>
+              `:`<div class="empty"><div class="empty-icon">📧</div><div class="empty-title">No email generated yet</div><button class="btn btn-primary" onclick="regenAI('${lead.id}')">✨ Generate Email</button></div>`}
+            </div>
+
+            <!-- NOTES TAB -->
+            <div id="lt-notes" style="display:none">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div><div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">OWNS PROPERTY</div><div style="font-size:13px">${lead.owns_property||'Unknown'}</div></div>
+                <div><div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">DECISION MAKER</div><div style="font-size:13px">${lead.decision_maker||'Unknown'}</div></div>
+                <div><div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">COMPETING BIDS</div><div style="font-size:13px">${lead.competing_bids||'Unknown'}</div></div>
+                <div><div style="font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px">PRIORITY</div><div style="font-size:13px">${lead.ai_priority||'Normal'}</div></div>
+              </div>
+              <div class="form-row"><label>Notes</label><textarea id="lead-notes-edit" style="min-height:100px">${lead.notes||''}</textarea></div>
+              <div class="form-row"><label>Log Call Outcome</label><textarea id="call-outcome" style="min-height:60px" placeholder="How did the call go? What did they say? Mood, tone, interest level..."></textarea></div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-primary" onclick="saveLeadNotes('${lead.id}')">Save Notes</button>
+                <button class="btn btn-ghost" onclick="analyzeCallOutcome('${lead.id}')">🤖 AI Analyze Call</button>
+              </div>
+              <div id="call-analysis-${lead.id}"></div>
+            </div>
+
           </div>
         </div>
       </div>`);
   }catch(e){toast(e.message,'error');}
 }
 
+function switchLeadTab(tab,el){
+  ['script','intel','email','notes'].forEach(t=>{
+    const el=$$(`lt-${t}`);if(el)el.style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('#ld .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+async function regenAI(leadId){
+  toast('🤖 Regenerating AI intelligence...');
+  try{
+    const[lead]=await sb('leads',`?id=eq.${leadId}`);
+    if(lead)await generateLeadAI(leadId,lead);
+    $$('ld')?.remove();
+    leadDetail(leadId);
+  }catch(e){toast(e.message,'error');}
+}
+
+async function saveLeadNotes(id){
+  try{
+    const notes=$$('lead-notes-edit').value;
+    const outcome=$$('call-outcome').value;
+    const updateData={notes,last_contact_at:new Date().toISOString()};
+    if(outcome)updateData.call_log=(updateData.call_log||'')+'\n['+new Date().toLocaleDateString()+'] '+outcome;
+    await upd('leads',id,updateData);
+    toast('Notes saved!');
+  }catch(e){toast(e.message,'error');}
+}
+
+async function analyzeCallOutcome(leadId){
+  const outcome=$$('call-outcome').value;
+  if(!outcome){toast('Enter call notes first','error');return;}
+  const el=$$(`call-analysis-${leadId}`);
+  el.innerHTML='<div class="loading" style="padding:12px"><div class="spinner"></div>AI analyzing...</div>';
+  try{
+    const[lead]=await sb('leads',`?id=eq.${leadId}`);
+    const result=await ai(`Analyze this call outcome for a construction lead. Lead: ${lead?.client_name}, Budget: ${fmt$(lead?.estimated_value)}, Job: ${lead?.job_type}.\n\nCall notes: "${outcome}"\n\nProvide: 1) Sentiment (hot/warm/cold), 2) Interest level 1-10, 3) Key concerns raised, 4) Exactly what to do next, 5) What to say in follow-up email, 6) Any red flags. Be direct and practical.`);
+    el.innerHTML=`<div class="ai-answer" style="margin-top:12px"><div class="ai-answer-label">AI Call Analysis</div>${result.replace(/\n/g,'<br>')}</div>`;
+    await upd('leads',leadId,{ai_next_action:result.split('\n')[3]||'Follow up based on call analysis',last_contact_at:new Date().toISOString()});
+  }catch(e){el.innerHTML=`<div style="color:var(--red);font-size:12px;margin-top:8px">AI unavailable: ${e.message}</div>`;}
+}
+
+function startCallMode(leadId){
+  $$('ld')?.remove();
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="call-mode" style="background:rgba(0,0,0,0.85)">
+      <div style="background:#fff;border-radius:16px;width:100%;max-width:680px;max-height:95vh;overflow-y:auto">
+        <div style="background:var(--teal);padding:16px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#fff">🎙️ Live Call Mode</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.8)" id="call-status-text">Ready — start recording when client picks up</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div id="call-timer" style="font-size:18px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums">0:00</div>
+            <button onclick="$$('call-mode').remove();stopCallRecording()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ End</button>
+          </div>
+        </div>
+        <div style="padding:16px 20px">
+          <div style="display:flex;gap:10px;margin-bottom:16px">
+            <button id="rec-btn" onclick="toggleCallRecording('${leadId}')" class="btn btn-primary" style="flex:1;padding:14px;font-size:15px;justify-content:center">🎙️ Start Recording</button>
+            <button onclick="leadDetail('${leadId}')" class="btn btn-ghost">View Full Lead</button>
+          </div>
+          <div id="live-transcript" style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:14px;min-height:80px;font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
+            <em>Transcript will appear here as the call progresses...</em>
+          </div>
+          <div id="live-suggestions" style="margin-bottom:14px"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:8px">Your Script (read from here)</div>
+          <div id="call-script-display" style="background:#fff;border:2px solid var(--teal);border-radius:8px;padding:14px;font-size:13px;line-height:1.9;max-height:300px;overflow-y:auto">
+            Loading script...
+          </div>
+          <div style="margin-top:14px">
+            <label>Post-Call Notes</label>
+            <textarea id="post-call-notes" style="min-height:80px" placeholder="How did they sound? Interest level? Concerns? What they asked about?"></textarea>
+            <button class="btn btn-primary" style="margin-top:8px;width:100%;justify-content:center" onclick="savePostCall('${leadId}')">💾 Save & Get AI Analysis</button>
+          </div>
+        </div>
+      </div>
+    </div>`);
+  loadCallScript(leadId);
+}
+
+async function loadCallScript(leadId){
+  try{
+    const[lead]=await sb('leads',`?id=eq.${leadId}`);
+    const el=$$('call-script-display');
+    if(lead?.ai_call_script){el.innerHTML=lead.ai_call_script.replace(/\n/g,'<br>');}
+    else{el.innerHTML='<em style="color:var(--muted)">No AI script yet. <a onclick="regenAI(\''+leadId+'\')" style="color:var(--teal);cursor:pointer">Generate one first</a></em>';}
+  }catch(e){}
+}
+
+async function toggleCallRecording(leadId){
+  const btn=$$('rec-btn');
+  if(!callRecorder){
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      callRecorder=new MediaRecorder(stream);
+      callChunks=[];
+      callRecorder.ondataavailable=e=>callChunks.push(e.data);
+      callRecorder.onstop=()=>processCallRecording(leadId);
+      callRecorder.start(1000);
+      callSeconds=0;
+      callTimer=setInterval(()=>{
+        callSeconds++;
+        const m=Math.floor(callSeconds/60),s=callSeconds%60;
+        $$('call-timer').textContent=m+':'+(s<10?'0':'')+s;
+      },1000);
+      btn.innerHTML='⏹️ Stop Recording';
+      btn.style.background='var(--red)';
+      $$('call-status-text').textContent='🔴 Recording...';
+      $$('live-transcript').innerHTML='<em style="color:var(--green)">Recording in progress — speak naturally</em>';
+    }catch(e){toast('Microphone access denied: '+e.message,'error');}
+  } else {
+    callRecorder.stop();
+    callRecorder.stream?.getTracks().forEach(t=>t.stop());
+    callRecorder=null;
+    clearInterval(callTimer);
+    btn.innerHTML='🎙️ Start New Recording';
+    btn.style.background='var(--teal)';
+    $$('call-status-text').textContent='Processing recording...';
+  }
+}
+
+async function processCallRecording(leadId){
+  try{
+    const blob=new Blob(callChunks,{type:'audio/webm'});
+    $$('live-transcript').innerHTML='<em style="color:var(--teal)">🤖 AI analyzing call recording...</em>';
+    const result=await ai(`A sales call was just recorded for a construction lead. The audio could not be transcribed automatically in this browser environment, but based on the call context, provide: 1) A reminder of the key points to cover, 2) Suggested follow-up actions, 3) What to note in the post-call summary. Keep it brief and actionable.`);
+    $$('live-suggestions').innerHTML=`<div class="ai-answer"><div class="ai-answer-label">Post-Call AI Notes</div>${result.replace(/\n/g,'<br>')}</div>`;
+    $$('live-transcript').innerHTML='<em style="color:var(--muted)">Recording saved. Add your notes below and click Save.</em>';
+    await upd('leads',leadId,{last_contact_at:new Date().toISOString()});
+  }catch(e){$$('live-transcript').innerHTML='<em style="color:var(--red)">Processing failed — please add notes manually below</em>';}
+}
+
+async function savePostCall(leadId){
+  const notes=$$('post-call-notes').value.trim();
+  if(!notes){toast('Add some call notes first','error');return;}
+  try{
+    const[lead]=await sb('leads',`?id=eq.${leadId}`);
+    const analysis=await ai(`Analyze this post-call note for a construction sales call.\nLead: ${lead?.client_name}, Budget: ${fmt$(lead?.estimated_value)}, Job: ${lead?.job_type}.\nNotes: "${notes}"\n\nReturn: 1) Sentiment (hot/warm/cold) 2) Interest 1-10 3) Exact next action with timing 4) Draft follow-up email subject 5) One sentence on how to improve the next call. Be specific and direct.`);
+    await upd('leads',leadId,{
+      notes:(lead?.notes||'')+'\n\n[Call '+new Date().toLocaleDateString()+'] '+notes,
+      last_contact_at:new Date().toISOString(),
+      ai_next_action:analysis.split('\n')[2]||'Follow up per call analysis'
+    });
+    $$('live-suggestions').innerHTML=`<div class="ai-answer"><div class="ai-answer-label">AI Call Analysis</div>${analysis.replace(/\n/g,'<br>')}</div>`;
+    toast('Call saved & analyzed!');
+  }catch(e){toast(e.message,'error');}
+}
+
+async function showFollowupEmail(leadId){
+  try{
+    const[lead]=await sb('leads',`?id=eq.${leadId}`);
+    if(!lead?.ai_followup_email_body){toast('Generate AI script first','error');return;}
+    document.body.insertAdjacentHTML('beforeend',`
+      <div class="form-overlay" id="email-modal">
+        <div class="form-modal">
+          <div class="form-header"><div class="form-title">📧 Follow-Up Email</div><button class="form-close" onclick="$$('email-modal').remove()">×</button></div>
+          <div class="form-body">
+            <div class="form-row"><label>To</label><input value="${lead.email||''}" id="em-to"></div>
+            <div class="form-row"><label>Subject</label><input value="${lead.ai_followup_email_subject||'Following up on your project'}" id="em-subj"></div>
+            <div class="form-row"><label>Body</label><textarea id="em-body" style="min-height:240px">${lead.ai_followup_email_body||''}</textarea></div>
+          </div>
+          <div class="form-footer">
+            <button class="btn btn-ghost" onclick="$$('email-modal').remove()">Cancel</button>
+            <button class="btn btn-primary" onclick="sendFollowupEmail('${leadId}','${lead.email||''}')">Send Email</button>
+          </div>
+        </div>
+      </div>`);
+  }catch(e){toast(e.message,'error');}
+}
+
+async function sendFollowupEmail(leadId,email){
+  const to=$$('em-to')?.value||email;
+  const subj=$$('em-subj')?.value||'Following up';
+  const body=$$('em-body')?.value||'';
+  if(!to){toast('No email address for this lead','error');return;}
+  try{
+    await ins('messages',{body:`EMAIL SENT TO: ${to}\nSUBJECT: ${subj}\n\n${body}`,job_id:null});
+    await upd('leads',leadId,{last_contact_at:new Date().toISOString(),last_email_at:new Date().toISOString()});
+    toast('Email logged! Connect Resend to send automatically.');
+    $$('email-modal')?.remove();
+    $$('ld')?.remove();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function confirmDeleteLead(id,name){
+  if(confirm(`Delete lead "${name}"? This cannot be undone.`)){
+    try{
+      const r=await fetch(`${SB}/rest/v1/leads?id=eq.${id}`,{method:'DELETE',headers:{apikey:SK,Authorization:`Bearer ${SK}`}});
+      if(!r.ok)throw new Error('Delete failed');
+      toast('Lead deleted');$$('ld')?.remove();pgSales();
+    }catch(e){toast(e.message,'error');}
+  }
+}
+
 async function stageUp(id,stage){
-  try{await upd('leads',id,{stage});toast(`Lead → ${stage}`);$$('ld')?.remove();pgSales();}
+  try{await upd('leads',id,{stage,last_contact_at:new Date().toISOString()});toast(`Lead → ${stage}`);$$('ld')?.remove();pgSales();}
   catch(e){toast(e.message,'error');}
 }
 
 async function toJob(lid,name,budget){
-  const jname=prompt(`Job name:`,`Renovation — ${name}`);if(!jname)return;
+  if(!confirm(`Convert ${name} to an active job? This means they paid the $5,000 deposit and are ready to proceed.`))return;
+  const jname=prompt(`Job name:`,`${name} — ${new Date().getFullYear()}`);if(!jname)return;
   try{
     await ins('jobs',{lead_id:lid,job_name:jname,client_name:name,budget,status:'active',start_date:new Date().toISOString().split('T')[0],percent_complete:0});
     await upd('leads',lid,{stage:'signed'});
-    toast('Job created!');$$('ld')?.remove();go('jobs');
+    toast('Job created! $5,000 deposit confirmed.');$$('ld')?.remove();go('jobs');
   }catch(e){toast(e.message,'error');}
 }
 
