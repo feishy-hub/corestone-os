@@ -282,6 +282,7 @@ async function pgSales(){
         <button class="btn ${salesView==='today'?'btn-primary':'btn-ghost'}" onclick="salesView='today';pgSales()">📋 Today's Actions</button>
         <button class="btn ${salesView==='pipeline'?'btn-primary':'btn-ghost'}" onclick="salesView='pipeline';pgSales()">🔄 Pipeline</button>
         <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="simulateAngiLead()" title="Simulate an Angi lead coming in by email">📧 Test Angi Lead</button>
           <button class="btn btn-primary" onclick="showLeadForm()">+ New Lead</button>
         </div>
       </div>
@@ -698,42 +699,89 @@ async function analyzeCallOutcome(leadId){
   }catch(e){el.innerHTML=`<div style="color:var(--red);font-size:12px;margin-top:8px">AI unavailable: ${e.message}</div>`;}
 }
 
+let liveCallLead=null;
+let recognizer=null;
+let liveTranscript=[];
+let suggestionCooldown=false;
+
 function startCallMode(leadId){
   $$('ld')?.remove();
+  liveCallLead=leadId;
+  liveTranscript=[];
   document.body.insertAdjacentHTML('beforeend',`
-    <div class="form-overlay" id="call-mode" style="background:rgba(0,0,0,0.85)">
-      <div style="background:#fff;border-radius:16px;width:100%;max-width:680px;max-height:95vh;overflow-y:auto">
-        <div style="background:var(--teal);padding:16px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between">
+    <div class="form-overlay" id="call-mode" style="background:rgba(0,0,0,0.9);align-items:flex-start;padding:8px;overflow-y:auto">
+      <div style="background:#fff;border-radius:16px;width:100%;max-width:720px;margin:auto">
+
+        <!-- HEADER -->
+        <div style="background:var(--teal);padding:14px 18px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between">
           <div>
-            <div style="font-size:16px;font-weight:800;color:#fff">🎙️ Live Call Mode</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.8)" id="call-status-text">Ready — start recording when client picks up</div>
+            <div style="font-size:15px;font-weight:800;color:#fff">🎙️ Live Call Mode</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.8)" id="call-status-text">Ready — press Start when they pick up</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px">
-            <div id="call-timer" style="font-size:18px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums">0:00</div>
-            <button onclick="$$('call-mode').remove();stopCallRecording()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ End</button>
+            <div id="call-timer" style="font-size:20px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;background:rgba(0,0,0,0.2);padding:4px 10px;border-radius:8px">0:00</div>
+            <button onclick="endCallMode()" style="background:rgba(255,69,58,0.8);border:none;color:#fff;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700">END CALL</button>
           </div>
         </div>
-        <div style="padding:16px 20px">
-          <div style="display:flex;gap:10px;margin-bottom:16px">
-            <button id="rec-btn" onclick="toggleCallRecording('${leadId}')" class="btn btn-primary" style="flex:1;padding:14px;font-size:15px;justify-content:center">🎙️ Start Recording</button>
-            <button onclick="leadDetail('${leadId}')" class="btn btn-ghost">View Full Lead</button>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:500px">
+
+          <!-- LEFT: AI SUGGESTIONS (what to say next) -->
+          <div style="padding:14px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em">🤖 AI — What to Say Next</div>
+
+            <!-- LIVE AI SUGGESTION BOX -->
+            <div id="ai-suggestion-box" style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border:2px solid var(--green);border-radius:10px;padding:14px;min-height:120px;font-size:14px;font-weight:600;line-height:1.7;color:#1b5e20">
+              Start the recording and the AI will suggest what to say in real time...
+            </div>
+
+            <!-- QUICK SITUATION BUTTONS -->
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:4px">They just said...</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <button class="quick-btn" onclick="quickSuggest('price_too_high')">😟 Too expensive</button>
+              <button class="quick-btn" onclick="quickSuggest('deposit_question')">❓ About the deposit</button>
+              <button class="quick-btn" onclick="quickSuggest('getting_bids')">📋 Getting other bids</button>
+              <button class="quick-btn" onclick="quickSuggest('not_ready')">⏰ Not ready yet</button>
+              <button class="quick-btn" onclick="quickSuggest('timeline')">📅 When can you start</button>
+              <button class="quick-btn" onclick="quickSuggest('how_it_works')">🏗️ How does it work</button>
+              <button class="quick-btn" onclick="quickSuggest('references')">⭐ Want references</button>
+              <button class="quick-btn" onclick="quickSuggest('ready_to_move')">✅ Ready to move forward</button>
+            </div>
+
+            <!-- RECORDING BUTTON -->
+            <button id="rec-btn" onclick="toggleCallRecording('${leadId}')" style="background:var(--teal);color:#fff;border:none;border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer;margin-top:auto;display:flex;align-items:center;justify-content:center;gap:8px">
+              🎙️ Start Recording
+            </button>
           </div>
-          <div id="live-transcript" style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:14px;min-height:80px;font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.7">
-            <em>Transcript will appear here as the call progresses...</em>
+
+          <!-- RIGHT: SCRIPT + TRANSCRIPT -->
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:0.1em">📄 Your Script</div>
+            <div id="call-script-display" style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;line-height:1.9;height:220px;overflow-y:auto;color:var(--text)">
+              Loading...
+            </div>
+
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Live Transcript</div>
+            <div id="live-transcript" style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;line-height:1.7;height:100px;overflow-y:auto;color:var(--muted)">
+              <em>Will capture what's said...</em>
+            </div>
+
+            <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Post-Call Notes</div>
+            <textarea id="post-call-notes" style="min-height:80px;font-size:12px" placeholder="How did they sound? Interest level? What concerns? What did you promise to send?"></textarea>
+            <button onclick="savePostCall('${leadId}')" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer;font-size:13px">
+              💾 Save Call & Get AI Analysis
+            </button>
           </div>
-          <div id="live-suggestions" style="margin-bottom:14px"></div>
-          <div style="font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:8px">Your Script (read from here)</div>
-          <div id="call-script-display" style="background:#fff;border:2px solid var(--teal);border-radius:8px;padding:14px;font-size:13px;line-height:1.9;max-height:300px;overflow-y:auto">
-            Loading script...
-          </div>
-          <div style="margin-top:14px">
-            <label>Post-Call Notes</label>
-            <textarea id="post-call-notes" style="min-height:80px" placeholder="How did they sound? Interest level? Concerns? What they asked about?"></textarea>
-            <button class="btn btn-primary" style="margin-top:8px;width:100%;justify-content:center" onclick="savePostCall('${leadId}')">💾 Save & Get AI Analysis</button>
-          </div>
+
         </div>
       </div>
     </div>`);
+
+  // CSS for quick buttons
+  const style=document.createElement('style');
+  style.textContent='.quick-btn{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:7px 8px;font-size:11px;font-weight:600;cursor:pointer;color:#166534;text-align:left;transition:all 0.15s;}.quick-btn:hover{background:var(--green);color:#fff;border-color:var(--green);}';
+  document.head.appendChild(style);
+
   loadCallScript(leadId);
 }
 
@@ -741,9 +789,59 @@ async function loadCallScript(leadId){
   try{
     const[lead]=await sb('leads',`?id=eq.${leadId}`);
     const el=$$('call-script-display');
-    if(lead?.ai_call_script){el.innerHTML=lead.ai_call_script.replace(/\n/g,'<br>');}
-    else{el.innerHTML='<em style="color:var(--muted)">No AI script yet. <a onclick="regenAI(\''+leadId+'\')" style="color:var(--teal);cursor:pointer">Generate one first</a></em>';}
+    if(lead?.ai_call_script){
+      el.innerHTML=lead.ai_call_script.replace(/\n/g,'<br>');
+      // Pre-load first suggestion
+      $$('ai-suggestion-box').innerHTML='<div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">OPENING — say this:</div>"Hey, how are you? This is Feishy from Corestone Developers. Am I speaking with '+lead.client_name+'? I\'m reaching out about your '+( lead.job_type||'project')+' — is now a good time to talk?"';
+    } else {
+      el.innerHTML='<em style="color:var(--muted)">No script yet — <a onclick="regenAI(\''+leadId+'\')" style="color:var(--teal);cursor:pointer">generate it first</a></em>';
+    }
   }catch(e){}
+}
+
+async function quickSuggest(situation){
+  const box=$$('ai-suggestion-box');
+  if(suggestionCooldown){toast('AI is thinking...','error');return;}
+  suggestionCooldown=true;
+  box.style.background='linear-gradient(135deg,#e3f2fd,#f1f8ff)';
+  box.style.borderColor='var(--blue)';
+  box.innerHTML='<div style="color:var(--blue);font-size:12px">🤖 Getting best response...</div>';
+
+  const situations={
+    price_too_high:'The customer just said the price sounds too high or expensive.',
+    deposit_question:'The customer is asking about the $5,000 deposit — what it covers, why it\'s needed, if it\'s refundable.',
+    getting_bids:'The customer says they are getting multiple bids from other contractors.',
+    not_ready:'The customer says they\'re not ready yet or need more time.',
+    timeline:'The customer is asking when we can start or how long the project takes.',
+    how_it_works:'The customer wants to know how the process works, step by step.',
+    references:'The customer is asking for references or wants to see past work.',
+    ready_to_move:'The customer is saying they want to move forward or are ready to start.'
+  };
+
+  try{
+    const[lead]=await sb('leads',`?id=eq.${liveCallLead}`);
+    const response=await ai(`You are a live sales coach for Feishy at Corestone Developers during a phone call with ${lead?.client_name||'a prospect'} about a ${lead?.job_type||'construction'} project (budget: ${fmt$(lead?.estimated_value)}).
+
+SITUATION: ${situations[situation]}
+
+COMPANY FACTS:
+- Full-service GC, Hudson Valley NY
+- Cost-plus model, 20% contractor fee — fully transparent
+- Client sees every invoice, every subcontractor cost
+- We manage all permits, all subs, every phase start to finish
+- $5,000 deposit before site visit — covers planning, architectural coordination, full estimate prep — goes TOWARD construction, not an extra fee
+- Verified Google reviews, Houzz partner
+- Daily updates with photos/videos
+
+Write EXACTLY what Feishy should say right now. Make it natural, warm, confident. 3-5 sentences maximum. He will read this word for word. Start directly with what to say, no intro.`,'You are a live sales coach. Give short, direct, confident responses Feishy can read aloud immediately.');
+
+    box.style.background='linear-gradient(135deg,#e8f5e9,#f1f8e9)';
+    box.style.borderColor='var(--green)';
+    box.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px;text-transform:uppercase">${situation.replace(/_/g,' ')} — say this:</div>${response}`;
+  }catch(e){
+    box.innerHTML='<em style="color:var(--red)">AI unavailable — check your script on the right</em>';
+  }
+  setTimeout(()=>suggestionCooldown=false,3000);
 }
 
 async function toggleCallRecording(leadId){
@@ -751,42 +849,82 @@ async function toggleCallRecording(leadId){
   if(!callRecorder){
     try{
       const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+
+      // Try Web Speech API for live transcript
+      if('webkitSpeechRecognition' in window||'SpeechRecognition' in window){
+        const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+        recognizer=new SR();
+        recognizer.continuous=true;
+        recognizer.interimResults=true;
+        recognizer.lang='en-US';
+        recognizer.onresult=e=>{
+          let interim='',final='';
+          for(let i=e.resultIndex;i<e.results.length;i++){
+            if(e.results[i].isFinal){final+=e.results[i][0].transcript+' ';}
+            else{interim+=e.results[i][0].transcript;}
+          }
+          if(final){
+            liveTranscript.push(final.trim());
+            const el=$$('live-transcript');
+            el.innerHTML=liveTranscript.slice(-6).map(t=>`<div style="margin-bottom:4px;padding:4px 8px;background:#f8fafc;border-radius:4px">🗣️ ${t}</div>`).join('');
+            el.scrollTop=el.scrollHeight;
+            // Auto-suggest every 3 sentences
+            if(liveTranscript.length%3===0)autoSuggestFromTranscript(final);
+          }
+          if(interim){$$('live-transcript').innerHTML+='<div style="color:var(--dim);font-style:italic">'+interim+'</div>';}
+        };
+        recognizer.start();
+      }
+
       callRecorder=new MediaRecorder(stream);
       callChunks=[];
       callRecorder.ondataavailable=e=>callChunks.push(e.data);
       callRecorder.onstop=()=>processCallRecording(leadId);
       callRecorder.start(1000);
       callSeconds=0;
-      callTimer=setInterval(()=>{
-        callSeconds++;
-        const m=Math.floor(callSeconds/60),s=callSeconds%60;
-        $$('call-timer').textContent=m+':'+(s<10?'0':'')+s;
-      },1000);
-      btn.innerHTML='⏹️ Stop Recording';
+      callTimer=setInterval(()=>{callSeconds++;const m=Math.floor(callSeconds/60),s=callSeconds%60;$$('call-timer').textContent=m+':'+(s<10?'0':'')+s;},1000);
+      btn.innerHTML='⏹️ Recording... tap to stop';
       btn.style.background='var(--red)';
-      $$('call-status-text').textContent='🔴 Recording...';
-      $$('live-transcript').innerHTML='<em style="color:var(--green)">Recording in progress — speak naturally</em>';
-    }catch(e){toast('Microphone access denied: '+e.message,'error');}
+      $$('call-status-text').textContent='🔴 Live — tap situation buttons when they say something';
+    }catch(e){toast('Mic access needed: tap the situation buttons instead','error');}
   } else {
+    if(recognizer)recognizer.stop();
     callRecorder.stop();
     callRecorder.stream?.getTracks().forEach(t=>t.stop());
     callRecorder=null;
     clearInterval(callTimer);
     btn.innerHTML='🎙️ Start New Recording';
     btn.style.background='var(--teal)';
-    $$('call-status-text').textContent='Processing recording...';
+    $$('call-status-text').textContent='Recording saved — add your notes below';
   }
+}
+
+async function autoSuggestFromTranscript(lastWords){
+  if(suggestionCooldown)return;
+  suggestionCooldown=true;
+  const box=$$('ai-suggestion-box');
+  try{
+    const[lead]=await sb('leads',`?id=eq.${liveCallLead}`);
+    const r=await ai(`Live sales call. Prospect just said: "${lastWords}". Lead: ${lead?.client_name}, ${lead?.job_type}, budget ${fmt$(lead?.estimated_value)}. Corestone Developers, Hudson Valley NY, cost-plus 20%, $5k deposit, full service. What should Feishy say RIGHT NOW? 2-3 sentences max. Start directly with the words to say.`,'You are a live sales coach. Ultra-short responses only.');
+    box.style.background='linear-gradient(135deg,#e8f5e9,#f1f8e9)';
+    box.style.borderColor='var(--green)';
+    box.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">🤖 RESPOND WITH:</div>${r}`;
+  }catch(e){}
+  setTimeout(()=>suggestionCooldown=false,4000);
 }
 
 async function processCallRecording(leadId){
   try{
-    const blob=new Blob(callChunks,{type:'audio/webm'});
-    $$('live-transcript').innerHTML='<em style="color:var(--teal)">🤖 AI analyzing call recording...</em>';
-    const result=await ai(`A sales call was just recorded for a construction lead. The audio could not be transcribed automatically in this browser environment, but based on the call context, provide: 1) A reminder of the key points to cover, 2) Suggested follow-up actions, 3) What to note in the post-call summary. Keep it brief and actionable.`);
-    $$('live-suggestions').innerHTML=`<div class="ai-answer"><div class="ai-answer-label">Post-Call AI Notes</div>${result.replace(/\n/g,'<br>')}</div>`;
-    $$('live-transcript').innerHTML='<em style="color:var(--muted)">Recording saved. Add your notes below and click Save.</em>';
+    $$('call-status-text').textContent='Recording saved — add your notes and save';
     await upd('leads',leadId,{last_contact_at:new Date().toISOString()});
-  }catch(e){$$('live-transcript').innerHTML='<em style="color:var(--red)">Processing failed — please add notes manually below</em>';}
+  }catch(e){}
+}
+
+function endCallMode(){
+  if(callRecorder){callRecorder.stop();callRecorder.stream?.getTracks().forEach(t=>t.stop());callRecorder=null;}
+  if(recognizer)recognizer.stop();
+  clearInterval(callTimer);
+  $$('call-mode')?.remove();
 }
 
 async function savePostCall(leadId){
@@ -866,7 +1004,54 @@ async function toJob(lid,name,budget){
   }catch(e){toast(e.message,'error');}
 }
 
-// JOBS
+// ANGI LEAD SIMULATION
+async function simulateAngiLead(){
+  // Simulate a realistic Angi lead email coming in
+  const fakeAngiLeads=[
+    {client_name:'David & Rachel Horowitz',phone:'(845) 334-7821',email:'davidhorowitz@gmail.com',address:'47 Orchard Hill Rd, Woodstock, NY 12498',job_type:'Full Home Renovation',estimated_value:380000,timeline:'3-6 months',lead_source:'Angi',notes:'Looking to fully renovate a 1970s colonial — kitchen, 2 bathrooms, open up the living room, new flooring throughout. Own the home. Have architectural plans already. Budget flexible if quality is right. Have spoken to 2 other contractors.',owns_property:'yes',decision_maker:'Needs spouse/partner',financing:'Cash',competing_bids:'Yes — getting multiple bids'},
+    {client_name:'Michael Torres',phone:'(845) 912-4433',email:'mtorres.builds@yahoo.com',address:'22 Sunset Lake Dr, New Paltz, NY 12561',job_type:'Custom Home Build',estimated_value:650000,timeline:'ASAP',lead_source:'Angi',notes:'Own the land, ready to build. Have a set of plans from architect. Need full GC to manage everything. Want to start as soon as possible. Live in NJ and building second home.',owns_property:'Own land — building new',decision_maker:'Yes — talking to owner',financing:'Construction loan',competing_bids:'No — only talking to us'},
+    {client_name:'Shmily Wislicki',phone:'(845) 701-5588',email:'swislicki@gmail.com',address:'130 Joyland Rd #14, Monticello, NY 12701',job_type:'Kitchen Remodel',estimated_value:95000,timeline:'1-3 months',lead_source:'Angi',notes:'Complete kitchen gut and remodel. Want high-end finishes, island, custom cabinets. Currently on Buildertrend with another contractor but not happy with communication. Interested in switching.',owns_property:'yes',decision_maker:'Yes — talking to owner',financing:'HELOC',competing_bids:'Already got other bids'},
+  ];
+  const lead=fakeAngiLeads[Math.floor(Math.random()*fakeAngiLeads.length)];
+
+  // Show the "email arriving" animation
+  document.body.insertAdjacentHTML('beforeend',`
+    <div id="angi-sim" style="position:fixed;top:20px;right:20px;z-index:9999;background:#fff;border:2px solid #ef4444;border-radius:12px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.2);max-width:380px;animation:slideIn 0.4s ease">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:36px;height:36px;background:#ef4444;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📧</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#1a2332">New Angi Lead — Just Arrived!</div>
+          <div style="font-size:11px;color:var(--muted)">From: leads@angi.com · ${new Date().toLocaleTimeString()}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6;margin-bottom:12px">
+        <strong>${lead.client_name}</strong><br>
+        ${lead.job_type} · ${lead.address}<br>
+        Budget: ${fmt$(lead.estimated_value)} · ${lead.timeline}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="createAngiLead(${JSON.stringify(lead).replace(/"/g,'&quot;')})" style="flex:1;background:#ef4444;color:#fff;border:none;border-radius:6px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">✅ Import Lead + AI Generate</button>
+        <button onclick="$$('angi-sim').remove()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;cursor:pointer">Dismiss</button>
+      </div>
+    </div>`);
+
+  // Auto dismiss after 15 seconds
+  setTimeout(()=>$$('angi-sim')?.remove(),15000);
+}
+
+async function createAngiLead(data){
+  $$('angi-sim')?.remove();
+  toast('📥 Importing Angi lead...');
+  try{
+    const r=await ins('leads',{...data,stage:'new',next_followup:new Date(Date.now()+2*3600000).toISOString()});
+    const saved=r[0];
+    toast('Lead imported! 🤖 AI generating script...');
+    if(saved?.id)await generateLeadAI(saved.id,data);
+    pgSales();
+    // Auto-open the lead after generation
+    setTimeout(()=>{if(saved?.id)leadDetail(saved.id);},2000);
+  }catch(e){toast(e.message,'error');}
+}
 async function pgJobs(){
   try{
     const jobs=await sb('jobs','?order=created_at.desc');
