@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corestone OS</title>
+<style>
+:root {
+  --bg:#0a0a0a;--surface:#141414;--card:#1c1c1e;--border:#2c2c2e;--border2:#3a3a3c;
+  --text:#f5f5f0;--muted:#8e8e93;--dim:#636366;
+  --amber:#ff9500;--amber-dim:rgba(255,149,0,0.12);
+  --green:#30d158;--green-dim:rgba(48,209,88,0.12);
+  --red:#ff453a;--red-dim:rgba(255,69,58,0.12);
+  --blue:#0a84ff;--blue-dim:rgba(10,132,255,0.12);
+  --radius:10px;--radius-sm:6px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;display:flex;}
+#sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;}
+.logo{padding:20px 16px 16px;border-bottom:1px solid var(--border);}
+.logo-text{font-size:18px;font-weight:700;color:var(--amber);letter-spacing:0.04em;}
+.logo-sub{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.12em;margin-top:2px;}
+.nav-section{padding:8px 8px 4px;}
+.nav-label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:0.12em;padding:4px 8px 6px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;transition:all 0.15s;margin-bottom:1px;}
+.nav-item:hover{background:var(--card);color:var(--text);}
+.nav-item.active{background:var(--amber-dim);color:var(--amber);}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;}
+.sidebar-bottom{margin-top:auto;padding:12px;border-top:1px solid var(--border);}
+.user-chip{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;}
+.user-chip:hover{background:var(--card);}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--amber-dim);border:1.5px solid var(--amber);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--amber);flex-shrink:0;}
+.user-name{font-size:12px;font-weight:600;color:var(--text);}
+.user-role{font-size:10px;color:var(--dim);}
+#main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{height:52px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:50;}
+.page-title{font-size:16px;font-weight:700;color:var(--text);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.content{padding:24px;flex:1;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;}
+.btn-primary{background:var(--amber);color:#000;}
+.btn-primary:hover{background:#e68600;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2);}
+.btn-ghost:hover{background:var(--card);color:var(--text);}
+.btn-sm{padding:5px 10px;font-size:11px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:700;}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.stat-value{font-size:22px;font-weight:700;color:var(--amber);line-height:1;margin-bottom:4px;}
+.stat-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.08em;}
+.stat-card.green .stat-value{color:var(--green);}
+.stat-card.red .stat-value{color:var(--red);}
+.stat-card.blue .stat-value{color:var(--blue);}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
+.badge-new,.badge-draft{background:var(--blue-dim);color:var(--blue);}
+.badge-contacted,.badge-on_hold,.badge-sent{background:rgba(255,149,0,0.15);color:var(--amber);}
+.badge-proposal{background:rgba(175,82,222,0.15);color:#af52de;}
+.badge-negotiating,.badge-pending{background:rgba(255,214,10,0.15);color:#ffd60a;}
+.badge-signed,.badge-active,.badge-paid,.badge-approved,.badge-completed{background:var(--green-dim);color:var(--green);}
+.badge-lost,.badge-overdue,.badge-rejected{background:var(--red-dim);color:var(--red);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;padding:8px 12px;border-bottom:1px solid var(--border);}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,0.02);}
+tr:last-child td{border-bottom:none;}
+.form-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
+.form-modal{background:var(--card);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
+.form-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.form-title{font-size:16px;font-weight:700;}
+.form-close{width:28px;height:28px;border-radius:50%;background:var(--border);border:none;color:var(--muted);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.form-close:hover{background:var(--border2);color:var(--text);}
+.form-body{padding:0 20px 20px;}
+.form-row{margin-bottom:14px;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;font-family:inherit;transition:border 0.15s;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--amber);}
+textarea{resize:vertical;min-height:80px;}
+select option{background:var(--card);}
+.form-footer{display:flex;gap:8px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border);}
+#toast{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+.toast-item{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;animation:slideIn 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
+.toast-item.success{border-color:var(--green);}
+.toast-item.error{border-color:var(--red);}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+.pipeline{display:grid;grid-template-columns:repeat(6,minmax(170px,1fr));gap:10px;overflow-x:auto;padding-bottom:8px;}
+.col-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;background:var(--surface);border:1px solid var(--border);border-bottom:none;}
+.col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);}
+.col-count{font-size:10px;color:var(--dim);background:var(--border);padding:1px 6px;border-radius:10px;}
+.col-body{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);min-height:280px;padding:8px;display:flex;flex-direction:column;gap:6px;}
+.lead-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;cursor:pointer;transition:all 0.15s;}
+.lead-card:hover{border-color:var(--amber);background:var(--card);}
+.lead-name{font-size:12px;font-weight:700;margin-bottom:3px;}
+.lead-type{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.lead-meta{display:flex;align-items:center;justify-content:space-between;}
+.lead-value{font-size:12px;font-weight:700;color:var(--amber);}
+.lead-days{font-size:10px;color:var(--dim);}
+.jobs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.job-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all 0.15s;}
+.job-card:hover{border-color:var(--amber);transform:translateY(-1px);}
+.job-name{font-size:14px;font-weight:700;}
+.job-client{font-size:12px;color:var(--muted);margin-top:2px;}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;margin:10px 0 8px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--amber),#ff6b00);}
+.empty{text-align:center;padding:48px 20px;color:var(--dim);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-title{font-size:15px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+.empty-sub{font-size:13px;margin-bottom:20px;}
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;color:var(--dim);gap:10px;}
+.spinner{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--amber);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px;}
+.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;}
+.tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab:hover{color:var(--muted);}
+.tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+.gk-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;}
+.gk-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.gk-type{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--amber);background:var(--amber-dim);padding:2px 8px;border-radius:20px;}
+.gk-title{font-size:14px;font-weight:700;margin-bottom:6px;}
+.gk-desc{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
+.gk-ai{background:var(--blue-dim);border:1px solid rgba(10,132,255,0.2);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;font-size:12px;line-height:1.6;}
+.gk-ai-label{font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;}
+.gk-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn-approve{background:var(--green-dim);color:var(--green);border:1px solid var(--green);padding:7px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;}
+.btn-approve:hover{background:var(--green);color:#000;}
+.btn-reject{background:var(--red-dim);color:var(--red);border:1px solid var(--red);padding:7px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;}
+.btn-reject:hover{background:var(--red);color:#fff;}
+.ai-answer{background:var(--blue-dim);border:1px solid rgba(10,132,255,0.2);border-radius:var(--radius-sm);padding:12px;margin-top:10px;font-size:12px;line-height:1.7;}
+.ai-answer-label{font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+input[type=checkbox]{width:auto!important;accent-color:var(--amber);}
+@media(max-width:768px){#sidebar{width:56px;}.logo-text,.logo-sub,.nav-item span:not(.nav-icon),.user-name,.user-role{display:none;}#main{margin-left:56px;}.pipeline{grid-template-columns:1fr 1fr;}.form-row-2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<nav id="sidebar">
+  <div class="logo"><div class="logo-text">CORESTONE</div><div class="logo-sub">Construction OS</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <div class="nav-item active" onclick="go('dashboard')"><span class="nav-icon">⚡</span><span>Command Center</span></div>
+    <div class="nav-item" onclick="go('sales')"><span class="nav-icon">📥</span><span>Sales</span></div>
+    <div class="nav-item" onclick="go('jobs')"><span class="nav-icon">🏗️</span><span>Jobs</span></div>
+    <div class="nav-item" onclick="go('pm')"><span class="nav-icon">📋</span><span>Project Mgmt</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Operations</div>
+    <div class="nav-item" onclick="go('financial')"><span class="nav-icon">💰</span><span>Financial</span></div>
+    <div class="nav-item" onclick="go('subs')"><span class="nav-icon">🤝</span><span>Subcontractors</span></div>
+    <div class="nav-item" onclick="go('files')"><span class="nav-icon">📁</span><span>Files & Media</span></div>
+    <div class="nav-item" onclick="go('messages')"><span class="nav-icon">💬</span><span>Messaging</span></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Intelligence</div>
+    <div class="nav-item" onclick="go('gatekeeper')"><span class="nav-icon">🔑</span><span>Gatekeeper</span><span class="nav-badge" id="gk-badge">0</span></div>
+    <div class="nav-item" onclick="go('reports')"><span class="nav-icon">📊</span><span>Reports</span></div>
+    <div class="nav-item" onclick="go('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></div>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="user-chip"><div class="avatar">FF</div><div><div class="user-name">Feishy F.</div><div class="user-role">Owner</div></div></div>
+  </div>
+</nav>
+<div id="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Command Center</div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost btn-sm" onclick="renderPage(CUR)">↻ Refresh</button>
+      <div style="font-size:11px;color:var(--dim)" id="ts"></div>
+    </div>
+  </div>
+  <div class="content" id="content"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+</div>
+<div id="toast"></div>
+<script>
+const SB='https://xecrebsxborvknsvuqdn.supabase.co';
+const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlY3JlYnN4Ym9ydmtuc3Z1cWRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDY3MjUsImV4cCI6MjA5NjYyMjcyNX0.GB9K01mI35XCJRli-Ywtvpjlc-1BoO9jFz9tdfioLgk';
+const AK='ANTHROPIC_KEY_HERE';
+let CUR='dashboard',JOB=null,PMTAB='logs';
+
+async function sb(table,params=''){
+  const r=await fetch(`${SB}/rest/v1/${table}${params}`,{headers:{apikey:SK,Authorization:`Bearer ${SK}`}});
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function ins(table,data){
+  const r=await fetch(`${SB}/rest/v1/${table}`,{method:'POST',headers:{apikey:SK,Authorization:`Bearer ${SK}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(data)});
+  if(!r.ok){const e=await r.json();throw new Error(e.message||'Insert failed');}return r.json();
+}
+async function upd(table,id,data){
+  const r=await fetch(`${SB}/rest/v1/${table}?id=eq.${id}`,{method:'PATCH',headers:{apikey:SK,Authorization:`Bearer ${SK}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error('Update failed');return r.json();
+}
+async function ai(prompt,sys='You are a construction AI for Corestone OS in Hudson Valley NY. Be concise.'){
+  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,system:sys,messages:[{role:'user',content:prompt}]})});
+  const d=await r.json();return d.content?.[0]?.text||'';
+}
+function toast(msg,type='success'){
+  const el=document.createElement('div');el.className=`toast-item ${type}`;
+  el.innerHTML=(type==='success'?'✅':'❌')+' '+msg;
+  document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3500);
+}
+function $$(id){return document.getElementById(id);}
+function fmt$(n){return n?'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0}):'$0';}
+function fmtD(d){return d?new Date(d).toLocaleDateString('en-US'):'—';}
+function dAgo(d){if(!d)return'?';const x=Math.floor((Date.now()-new Date(d))/86400000);return x===0?'today':x+'d ago';}
+function phases(){return['Pre-Construction','Demo','Foundation','Framing','Roofing','Rough MEP','Insulation','Drywall','Finish Carpentry','Tile','Paint','Finish MEP','Cabinets & Counters','Punch List','Complete'];}
+
+function go(page,jobId=null){
+  CUR=page;if(jobId)JOB=jobId;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes(`'${page}'`))n.classList.add('active');});
+  $$('ts').textContent='Updated '+new Date().toLocaleTimeString();
+  const T={dashboard:'Command Center',sales:'Sales Pipeline',jobs:'Jobs',pm:'Project Management',financial:'Financial',subs:'Subcontractors',files:'Files & Media',messages:'Messaging',gatekeeper:'Gatekeeper Queue',reports:'Reports',settings:'Settings'};
+  $$('page-title').textContent=T[page]||page;
+  renderPage(page);
+}
+function renderPage(p){
+  $$('content').innerHTML='<div class="loading"><div class="spinner"></div>Loading...</div>';
+  ({dashboard:pgDash,sales:pgSales,jobs:pgJobs,pm:pgPM,financial:pgFin,subs:pgSubs,files:pgFiles,messages:pgMsgs,gatekeeper:pgGK,reports:pgReports,settings:pgSettings}[p]||pgNotFound)();
+}
+
+// DASHBOARD
+async function pgDash(){
+  try{
+    const[leads,jobs,invs,gk]=await Promise.all([sb('leads','?select=estimated_value,stage'),sb('jobs','?select=status,percent_complete'),sb('invoices','?select=amount,amount_paid,status'),sb('gatekeeper_queue','?select=id&status=eq.pending')]);
+    $$('gk-badge').textContent=gk.length;
+    const pipe=leads.reduce((s,l)=>s+(l.estimated_value||0),0);
+    const rev=invs.filter(i=>i.status==='paid').reduce((s,i)=>s+i.amount,0);
+    const over=invs.filter(i=>i.status==='overdue').reduce((s,i)=>s+(i.amount-i.amount_paid),0);
+    $$('content').innerHTML=`
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-value">${jobs.filter(j=>j.status==='active').length}</div><div class="stat-label">Active Jobs</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt$(pipe)}</div><div class="stat-label">Pipeline Value</div></div>
+        <div class="stat-card green"><div class="stat-value">${fmt$(rev)}</div><div class="stat-label">Revenue Collected</div></div>
+        <div class="stat-card red"><div class="stat-value">${fmt$(over)}</div><div class="stat-label">Overdue Invoices</div></div>
+        <div class="stat-card blue"><div class="stat-value">${gk.length}</div><div class="stat-label">Decisions Waiting</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Quick Actions</div></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-ghost" onclick="go('sales')" style="justify-content:flex-start">📥 Add New Lead</button>
+            <button class="btn btn-ghost" onclick="go('pm')" style="justify-content:flex-start">📋 Log Daily Progress</button>
+            <button class="btn btn-ghost" onclick="go('financial')" style="justify-content:flex-start">💰 Create Invoice</button>
+            <button class="btn btn-ghost" onclick="go('gatekeeper')" style="justify-content:flex-start">🔑 Gatekeeper (${gk.length})</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Job Health</div></div>
+          ${jobs.filter(j=>j.status==='active').slice(0,5).map(j=>`
+            <div style="margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px"><span style="color:var(--muted)">Active Job</span><span style="color:var(--amber)">${j.percent_complete||0}%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${j.percent_complete||0}%"></div></div>
+            </div>`).join('')}
+          ${jobs.filter(j=>j.status==='active').length===0?'<div style="color:var(--dim);font-size:12px">No active jobs yet</div>':''}
+        </div>
+      </div>`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Connection Error</div><div class="empty-sub">${e.message}</div></div>`;}
+}
+
+// SALES
+async function pgSales(){
+  try{
+    const leads=await sb('leads','?order=created_at.desc');
+    const stages=['new','contacted','proposal','negotiating','signed','lost'];
+    const labels={new:'New',contacted:'Contacted',proposal:'Proposal',negotiating:'Negotiating',signed:'Signed ✓',lost:'Lost'};
+    const g={};stages.forEach(s=>g[s]=leads.filter(l=>l.stage===s));
+    $$('content').innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:13px;color:var(--muted)">${leads.length} leads · ${fmt$(leads.reduce((s,l)=>s+(l.estimated_value||0),0))} pipeline</div>
+        <button class="btn btn-primary" onclick="showLeadForm()">+ New Lead</button>
+      </div>
+      <div class="pipeline">
+        ${stages.map(s=>`
+          <div>
+            <div class="col-header"><span class="col-title">${labels[s]}</span><span class="col-count">${g[s].length}</span></div>
+            <div class="col-body">
+              ${g[s].map(l=>`<div class="lead-card" onclick="leadDetail('${l.id}')">
+                <div class="lead-name">${l.client_name}</div>
+                <div class="lead-type">${l.job_type||'General'}</div>
+                <div class="lead-meta"><span class="lead-value">${fmt$(l.estimated_value)}</span><span class="lead-days">${dAgo(l.created_at)}</span></div>
+                ${l.address?`<div style="font-size:10px;color:var(--dim);margin-top:4px">📍 ${l.address}</div>`:''}
+              </div>`).join('')}
+              ${g[s].length===0?`<div style="text-align:center;padding:20px;font-size:11px;color:var(--dim)">Empty</div>`:''}
+            </div>
+            <div style="text-align:center;font-size:10px;color:var(--dim);padding:4px">${fmt$(g[s].reduce((s,l)=>s+(l.estimated_value||0),0))}</div>
+          </div>`).join('')}
+      </div>`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+
+function showLeadForm(l=null){
+  const E=l?1:0;
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="lf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">${E?'Edit':'New'} Lead</div><button class="form-close" onclick="$$('lf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row-2">
+            <div class="form-row"><label>Client Name *</label><input id="l-name" value="${l?.client_name||''}"></div>
+            <div class="form-row"><label>Job Type</label><input id="l-type" value="${l?.job_type||''}" placeholder="Kitchen Remodel"></div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Est. Value ($)</label><input id="l-val" type="number" value="${l?.estimated_value||''}"></div>
+            <div class="form-row"><label>Stage</label><select id="l-stage">${['new','contacted','proposal','negotiating','signed','lost'].map(s=>`<option value="${s}"${l?.stage===s?' selected':''}>${s}</option>`).join('')}</select></div>
+          </div>
+          <div class="form-row"><label>Address</label><input id="l-addr" value="${l?.address||''}" placeholder="Kingston, NY"></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Phone</label><input id="l-phone" value="${l?.phone||''}"></div>
+            <div class="form-row"><label>Email</label><input id="l-email" type="email" value="${l?.email||''}"></div>
+          </div>
+          <div class="form-row"><label>Lead Source</label><select id="l-src">${['Referral','Google','Angi','Houzz','Website','Cold outreach','Architect partner','Instagram','Door knock'].map(s=>`<option${l?.lead_source===s?' selected':''}>${s}</option>`).join('')}</select></div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('lf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveLead(${E?`'${l.id}'`:null})">${E?'Save':'Add Lead'}</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveLead(id=null){
+  const name=$$('l-name').value.trim();
+  if(!name){toast('Name required','error');return;}
+  const d={client_name:name,job_type:$$('l-type').value,estimated_value:parseFloat($$('l-val').value)||0,stage:$$('l-stage').value,address:$$('l-addr').value,phone:$$('l-phone').value,email:$$('l-email').value,lead_source:$$('l-src').value};
+  try{
+    id?await upd('leads',id,d):await ins('leads',d);
+    toast(id?'Lead updated':'Lead added!');$$('lf')?.remove();pgSales();
+  }catch(e){toast(e.message,'error');}
+}
+
+async function leadDetail(id){
+  try{
+    const[lead]=await sb('leads',`?id=eq.${id}`);if(!lead)return;
+    document.body.insertAdjacentHTML('beforeend',`
+      <div class="form-overlay" id="ld">
+        <div class="form-modal" style="max-width:580px">
+          <div class="form-header">
+            <div><div class="form-title">${lead.client_name}</div><div style="font-size:12px;color:var(--muted)">${lead.job_type||''} · ${lead.address||''}</div></div>
+            <button class="form-close" onclick="$$('ld').remove()">×</button>
+          </div>
+          <div class="form-body">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+              <div class="stat-card" style="padding:12px"><div class="stat-value" style="font-size:18px">${fmt$(lead.estimated_value)}</div><div class="stat-label">Est. Value</div></div>
+              <div class="stat-card" style="padding:12px"><div style="font-size:13px;font-weight:700;margin-bottom:4px">${lead.lead_source||'—'}</div><div class="stat-label">Source</div></div>
+              <div class="stat-card" style="padding:12px"><span class="badge badge-${lead.stage}">${lead.stage}</span><div class="stat-label" style="margin-top:6px">Stage</div></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+              ${lead.phone?`<a href="tel:${lead.phone}" class="btn btn-ghost btn-sm">📞 ${lead.phone}</a>`:''}
+              ${lead.email?`<a href="mailto:${lead.email}" class="btn btn-ghost btn-sm">✉️ ${lead.email}</a>`:''}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="$$('ld').remove();showLeadForm(${JSON.stringify(lead).replace(/"/g,'&quot;')})">✏️ Edit</button>
+              <button class="btn btn-ghost btn-sm" onclick="toJob('${lead.id}','${lead.client_name}',${lead.estimated_value||0})">🏗️ Convert to Job</button>
+              <button class="btn btn-ghost btn-sm" onclick="stageUp('${lead.id}','signed')">✅ Mark Signed</button>
+              <button class="btn btn-ghost btn-sm" onclick="stageUp('${lead.id}','lost')">❌ Mark Lost</button>
+            </div>
+          </div>
+        </div>
+      </div>`);
+  }catch(e){toast(e.message,'error');}
+}
+
+async function stageUp(id,stage){
+  try{await upd('leads',id,{stage});toast(`Lead → ${stage}`);$$('ld')?.remove();pgSales();}
+  catch(e){toast(e.message,'error');}
+}
+
+async function toJob(lid,name,budget){
+  const jname=prompt(`Job name:`,`Renovation — ${name}`);if(!jname)return;
+  try{
+    await ins('jobs',{lead_id:lid,job_name:jname,client_name:name,budget,status:'active',start_date:new Date().toISOString().split('T')[0],percent_complete:0});
+    await upd('leads',lid,{stage:'signed'});
+    toast('Job created!');$$('ld')?.remove();go('jobs');
+  }catch(e){toast(e.message,'error');}
+}
+
+// JOBS
+async function pgJobs(){
+  try{
+    const jobs=await sb('jobs','?order=created_at.desc');
+    $$('content').innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:13px;color:var(--muted)">${jobs.length} jobs · ${jobs.filter(j=>j.status==='active').length} active</div>
+        <button class="btn btn-primary" onclick="showJobForm()">+ New Job</button>
+      </div>
+      ${jobs.length===0?`<div class="empty"><div class="empty-icon">🏗️</div><div class="empty-title">No jobs yet</div><div class="empty-sub">Create a job or convert a signed lead.</div></div>`:
+      `<div class="jobs-grid">${jobs.map(j=>`
+        <div class="job-card" onclick="go('pm','${j.id}')">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+            <div><div class="job-name">${j.job_name}</div><div class="job-client">${j.client_name}</div></div>
+            <span class="badge badge-${j.status}">${j.status}</span>
+          </div>
+          <div style="font-size:11px;color:var(--dim);margin-bottom:8px">📍 ${j.address||'No address'}</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${j.percent_complete||0}%"></div></div>
+          <div style="display:flex;gap:12px;font-size:11px;color:var(--dim)">
+            <span>Phase: <strong style="color:var(--text)">${j.current_phase||'Pre-Construction'}</strong></span>
+            <span>${j.percent_complete||0}% done</span>
+            <span>${fmt$(j.budget)}</span>
+          </div>
+        </div>`).join('')}</div>`}`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+
+function showJobForm(){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="jf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">New Job</div><button class="form-close" onclick="$$('jf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row"><label>Job Name *</label><input id="j-name" placeholder="Kitchen Renovation — Johnson"></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Client Name *</label><input id="j-client" placeholder="Johnson Family"></div>
+            <div class="form-row"><label>Status</label><select id="j-status"><option value="active">Active</option><option value="on_hold">On Hold</option><option value="completed">Completed</option></select></div>
+          </div>
+          <div class="form-row"><label>Address</label><input id="j-addr" placeholder="123 Main St, Kingston, NY"></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Budget ($)</label><input id="j-budget" type="number"></div>
+            <div class="form-row"><label>Start Date</label><input id="j-start" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+          </div>
+          <div class="form-row"><label>Current Phase</label><select id="j-phase">${phases().map(p=>`<option>${p}</option>`).join('')}</select></div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('jf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveJob()">Create Job</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveJob(){
+  const name=$$('j-name').value.trim(),client=$$('j-client').value.trim();
+  if(!name||!client){toast('Name and client required','error');return;}
+  try{
+    await ins('jobs',{job_name:name,client_name:client,status:$$('j-status').value,address:$$('j-addr').value,budget:parseFloat($$('j-budget').value)||0,start_date:$$('j-start').value,current_phase:$$('j-phase').value,percent_complete:0});
+    toast('Job created!');$$('jf').remove();pgJobs();
+  }catch(e){toast(e.message,'error');}
+}
+
+// PROJECT MANAGEMENT
+async function pgPM(){
+  try{
+    const jobs=await sb('jobs','?select=id,job_name&status=eq.active');
+    $$('content').innerHTML=`
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <label style="font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0">Job:</label>
+        <select id="pm-sel" onchange="loadPM(this.value)" style="width:280px">
+          <option value="">— Choose active job —</option>
+          ${jobs.map(j=>`<option value="${j.id}"${JOB===j.id?' selected':''}>${j.job_name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="tabs">
+        ${[['logs','Daily Logs'],['schedule','Schedule'],['punch','Punch List'],['safety','Safety'],['co','Change Orders'],['permits','Permits']].map(([k,v])=>`<div class="tab ${PMTAB===k?'active':''}" onclick="setPMTab('${k}')">${v}</div>`).join('')}
+      </div>
+      <div id="pm-body"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Select a job above</div></div></div>`;
+    if(JOB){$$('pm-sel').value=JOB;loadPM(JOB);}
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+
+function setPMTab(t){PMTAB=t;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));event.target.classList.add('active');const v=$$('pm-sel')?.value;if(v)loadPM(v);}
+function loadPM(id){JOB=id;if(!id)return;const c=$$('pm-body');c.innerHTML='<div class="loading"><div class="spinner"></div></div>';({logs:pmLogs,schedule:pmSched,punch:pmPunch,safety:pmSafety,co:pmCO,permits:pmPermits}[PMTAB]||pmLogs)(id,c);}
+
+// PM TABS
+async function pmLogs(jobId,c){
+  try{
+    const logs=await sb('daily_logs',`?job_id=eq.${jobId}&order=log_date.desc`);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="showLogForm('${jobId}')">+ New Daily Log</button></div>
+      ${logs.length===0?`<div class="empty"><div class="empty-icon">📝</div><div class="empty-title">No logs yet</div><div class="empty-sub">Record today's site progress.</div><button class="btn btn-primary" onclick="showLogForm('${jobId}')">+ New Daily Log</button></div>`:
+      logs.map(l=>`<div class="log-card">
+        <div class="log-header"><span style="font-size:12px;font-weight:700">📅 ${fmtD(l.log_date)}</span><span style="font-size:10px;color:var(--amber);text-transform:uppercase">${l.phase||''}</span></div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">${l.ai_summary||l.notes||''}</div>
+        <div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:var(--dim)">
+          <span>👷 Crew: <strong style="color:var(--text)">${l.crew_count||0}</strong></span>
+          <span>🌤️ ${l.weather||'—'}</span>
+          ${l.temperature?`<span>🌡️ ${l.temperature}</span>`:''}
+        </div>
+      </div>`).join('')}`;
+  }catch(e){c.innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+
+function showLogForm(jobId){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="lgf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">New Daily Log</div><button class="form-close" onclick="$$('lgf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row-2">
+            <div class="form-row"><label>Date</label><input id="lg-date" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+            <div class="form-row"><label>Phase</label><select id="lg-phase">${phases().map(p=>`<option>${p}</option>`).join('')}</select></div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Crew Count</label><input id="lg-crew" type="number" value="0" min="0"></div>
+            <div class="form-row"><label>Weather</label><select id="lg-wx"><option>Clear</option><option>Cloudy</option><option>Rain</option><option>Snow</option><option>Wind</option></select></div>
+          </div>
+          <div class="form-row"><label>Temperature</label><input id="lg-temp" placeholder="72°F"></div>
+          <div class="form-row"><label>Notes / Voice Note *</label><textarea id="lg-notes" style="min-height:120px" placeholder="What happened today? Paste or type your voice note..."></textarea></div>
+          <button class="btn btn-ghost btn-sm" style="margin-bottom:10px" onclick="aiLog()">🤖 AI Structure This Log</button>
+          <div id="lg-ai"></div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('lgf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveLog('${jobId}')">Save Log</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function aiLog(){
+  const notes=$$('lg-notes').value;if(!notes.trim()){toast('Enter notes first','error');return;}
+  const p=$$('lg-ai');p.innerHTML='<div class="loading" style="padding:10px"><div class="spinner"></div>AI thinking...</div>';
+  try{
+    const r=await ai(`Convert this raw site manager voice note into a clean structured daily log with sections: Work Completed, Crew Summary, Issues/Delays, Materials, Next Steps.\n\nNote: ${notes}`);
+    p.innerHTML=`<div class="ai-answer"><div class="ai-answer-label">AI Structured Preview</div>${r.replace(/\n/g,'<br>')}</div>`;
+    p.dataset.s=r;
+  }catch(e){p.innerHTML=`<div class="ai-answer" style="border-color:var(--red)">AI unavailable</div>`;}
+}
+
+async function saveLog(jobId){
+  const notes=$$('lg-notes').value.trim();if(!notes){toast('Notes required','error');return;}
+  try{
+    await ins('daily_logs',{job_id:jobId,log_date:$$('lg-date').value,phase:$$('lg-phase').value,crew_count:parseInt($$('lg-crew').value)||0,weather:$$('lg-wx').value,temperature:$$('lg-temp').value,notes,ai_summary:$$('lg-ai').dataset.s||null});
+    toast('Log saved!');$$('lgf').remove();loadPM(jobId);
+  }catch(e){toast(e.message,'error');}
+}
+
+async function pmSched(jobId,c){
+  try{
+    const ps=await sb('schedule_phases',`?job_id=eq.${jobId}&order=sort_order.asc`);
+    c.innerHTML=`
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px">
+        ${ps.length===0?`<button class="btn btn-ghost" onclick="load13('${jobId}')">Load 13 Phases</button>`:''}
+        <button class="btn btn-primary" onclick="showPhaseForm('${jobId}')">+ Add Phase</button>
+      </div>
+      ${ps.length===0?`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">No schedule yet</div><div class="empty-sub">Load the default 13 construction phases or add manually.</div></div>`:
+      `<div class="table-wrap"><table><thead><tr><th>Phase</th><th>Start</th><th>End</th><th>Status</th></tr></thead><tbody>
+        ${ps.map(p=>`<tr><td style="font-weight:600">${p.phase_name}</td><td>${fmtD(p.planned_start)}</td><td>${fmtD(p.planned_end)}</td><td><span class="badge badge-${p.status==='complete'?'signed':p.status==='active'?'contacted':'draft'}">${p.status||'pending'}</span></td></tr>`).join('')}
+      </tbody></table></div>`}`;
+  }catch(e){c.innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+
+async function load13(jobId){
+  const ps=['Pre-Construction','Demo','Foundation','Framing','Roofing','Rough MEP','Insulation','Drywall','Finish Carpentry','Tile','Paint','Finish MEP','Cabinets & Counters'];
+  try{for(let i=0;i<ps.length;i++)await ins('schedule_phases',{job_id:jobId,phase_name:ps[i],sort_order:i,status:i===0?'active':'pending'});
+  toast('13 phases loaded!');loadPM(jobId);}catch(e){toast(e.message,'error');}
+}
+
+function showPhaseForm(jobId){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="phf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">Add Phase</div><button class="form-close" onclick="$$('phf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row"><label>Phase</label><select id="ph-name">${phases().map(p=>`<option>${p}</option>`).join('')}</select></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Start Date</label><input id="ph-start" type="date"></div>
+            <div class="form-row"><label>End Date</label><input id="ph-end" type="date"></div>
+          </div>
+          <div class="form-row"><label>Status</label><select id="ph-status"><option value="pending">Pending</option><option value="active">Active</option><option value="complete">Complete</option></select></div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('phf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="savePhase('${jobId}')">Add</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function savePhase(jobId){
+  try{await ins('schedule_phases',{job_id:jobId,phase_name:$$('ph-name').value,planned_start:$$('ph-start').value||null,planned_end:$$('ph-end').value||null,status:$$('ph-status').value});
+  toast('Phase added!');$$('phf').remove();loadPM(jobId);}catch(e){toast(e.message,'error');}
+}
+
+async function pmPunch(jobId,c){
+  try{
+    const items=await sb('punch_list',`?job_id=eq.${jobId}&order=created_at.desc`);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="showPunchForm('${jobId}')">+ Add Item</button></div>
+      ${items.length===0?`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">No punch items</div><div class="empty-sub">Add items for final walkthrough.</div></div>`:
+      `<div class="table-wrap"><table><thead><tr><th>Item</th><th>Status</th><th>Deadline</th></tr></thead><tbody>
+        ${items.map(i=>`<tr><td style="font-weight:600">${i.item_description}</td><td><span class="badge badge-${i.status==='completed'?'signed':i.status==='in_progress'?'contacted':'draft'}">${i.status}</span></td><td>${fmtD(i.deadline)}</td></tr>`).join('')}
+      </tbody></table></div>`}`;
+  }catch(e){c.innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+function showPunchForm(jobId){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="puf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">Add Punch Item</div><button class="form-close" onclick="$$('puf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row"><label>Description *</label><textarea id="pu-desc" style="min-height:80px" placeholder="Tile grout color wrong in master bath"></textarea></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Status</label><select id="pu-status"><option value="open">Open</option><option value="in_progress">In Progress</option><option value="completed">Completed</option></select></div>
+            <div class="form-row"><label>Deadline</label><input id="pu-dl" type="date"></div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('puf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="savePunch('${jobId}')">Add</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function savePunch(jobId){
+  const d=$$('pu-desc').value.trim();if(!d){toast('Description required','error');return;}
+  try{await ins('punch_list',{job_id:jobId,item_description:d,status:$$('pu-status').value,deadline:$$('pu-dl').value||null});
+  toast('Punch item added!');$$('puf').remove();loadPM(jobId);}catch(e){toast(e.message,'error');}
+}
+
+async function pmSafety(jobId,c){
+  try{
+    const logs=await sb('safety_logs',`?job_id=eq.${jobId}&order=log_date.desc`);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="showSafetyForm('${jobId}')">+ Safety Log</button></div>
+      ${logs.length===0?`<div class="empty"><div class="empty-icon">🦺</div><div class="empty-title">No safety logs</div><div class="empty-sub">Log daily toolbox talks here.</div></div>`:
+      logs.map(l=>`<div class="log-card">
+        <div class="log-header"><span style="font-size:12px;font-weight:700">📅 ${fmtD(l.log_date)}</span>${l.incident_occurred?'<span style="color:var(--red);font-size:11px;font-weight:700">⚠️ INCIDENT</span>':''}</div>
+        <div style="font-size:12px;color:var(--muted)">Toolbox: ${l.toolbox_talk_topic||'—'} ${l.toolbox_talk_completed?'✅':'❌'}</div>
+        ${l.incident_description?`<div style="color:var(--red);font-size:12px;margin-top:6px">${l.incident_description}</div>`:''}
+      </div>`).join('')}`;
+  }catch(e){c.innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+function showSafetyForm(jobId){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="saf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">Safety Log</div><button class="form-close" onclick="$$('saf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row-2">
+            <div class="form-row"><label>Date</label><input id="sf-date" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+            <div class="form-row"><label>Toolbox Topic</label><input id="sf-topic" placeholder="Fall protection..."></div>
+          </div>
+          <div class="form-row" style="display:flex;align-items:center;gap:8px"><input id="sf-done" type="checkbox"><label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);margin:0">Toolbox talk completed</label></div>
+          <div class="form-row" style="display:flex;align-items:center;gap:8px"><input id="sf-inc" type="checkbox" onchange="$$('sf-inc-fields').style.display=this.checked?'block':'none'"><label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);margin:0">Incident occurred</label></div>
+          <div id="sf-inc-fields" style="display:none">
+            <div class="form-row"><label>Type</label><select id="sf-itype"><option>Injury</option><option>Near Miss</option><option>Property Damage</option><option>Environmental</option></select></div>
+            <div class="form-row"><label>Description</label><textarea id="sf-idesc" style="min-height:80px"></textarea></div>
+            <div class="form-row"><label>Corrective Action</label><textarea id="sf-corr" style="min-height:60px"></textarea></div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('saf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveSafety('${jobId}')">Save</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function saveSafety(jobId){
+  const inc=$$('sf-inc').checked;
+  try{
+    await ins('safety_logs',{job_id:jobId,log_date:$$('sf-date').value,toolbox_talk_topic:$$('sf-topic').value,toolbox_talk_completed:$$('sf-done').checked,incident_occurred:inc,incident_type:inc?$$('sf-itype').value:null,incident_description:inc?$$('sf-idesc').value:null,corrective_action:inc?$$('sf-corr').value:null});
+    if(inc)await ins('gatekeeper_queue',{item_type:'safety_incident',title:'Safety Incident Reported',description:$$('sf-idesc').value,job_id:jobId,priority:'urgent'});
+    toast('Safety log saved!'+(inc?' Incident → Gatekeeper.':''));$$('saf').remove();loadPM(jobId);
+  }catch(e){toast(e.message,'error');}
+}
+
+async function pmCO(jobId,c){
+  try{
+    const cos=await sb('change_orders',`?job_id=eq.${jobId}&order=created_at.desc`);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="showCOForm('${jobId}')">+ New CO</button></div>
+      ${cos.length===0?`<div class="empty"><div class="empty-icon">🔄</div><div class="empty-title">No change orders</div></div>`:
+      `<div class="table-wrap"><table><thead><tr><th>#</th><th>Title</th><th>Cost</th><th>Days</th><th>Status</th><th></th></tr></thead><tbody>
+        ${cos.map(c=>`<tr><td style="color:var(--muted);font-size:11px">CO-${String(c.co_number||'?').padStart(3,'0')}</td><td style="font-weight:600">${c.title}</td><td style="color:var(--amber)">${fmt$(c.cost_impact)}</td><td>${c.schedule_impact_days||0}d</td><td><span class="badge badge-${c.status}">${c.status}</span></td><td><button class="btn btn-ghost btn-sm" onclick="approveCO('${c.id}','${jobId}')">Approve</button></td></tr>`).join('')}
+      </tbody></table></div>`}`;
+  }catch(e){c.innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+function showCOForm(jobId){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="cof">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">New Change Order</div><button class="form-close" onclick="$$('cof').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row"><label>Title *</label><input id="co-title" placeholder="Under-cabinet lighting addition"></div>
+          <div class="form-row"><label>Description</label><textarea id="co-desc" style="min-height:70px"></textarea></div>
+          <div class="form-row"><label>Reason</label><select id="co-reason"><option>Client Request</option><option>Unforeseen Condition</option><option>Design Change</option><option>Owner Directed</option><option>Error & Omission</option></select></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Cost Impact ($)</label><input id="co-cost" type="number"></div>
+            <div class="form-row"><label>Schedule (days)</label><input id="co-days" type="number" value="0"></div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('cof').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveCO('${jobId}')">Create CO</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function saveCO(jobId){
+  const title=$$('co-title').value.trim();if(!title){toast('Title required','error');return;}
+  const cost=parseFloat($$('co-cost').value)||0;
+  try{
+    await ins('change_orders',{job_id:jobId,title,description:$$('co-desc').value,reason:$$('co-reason').value,cost_impact:cost,schedule_impact_days:parseInt($$('co-days').value)||0,status:'draft'});
+    if(cost>500)await ins('gatekeeper_queue',{item_type:'change_order',title:`CO Approval: ${title}`,description:`Cost: ${fmt$(cost)}`,job_id:jobId,amount:cost,ai_recommendation:`Review CO for ${fmt$(cost)} before sending to client.`});
+    toast('CO created!'+(cost>500?' → Gatekeeper.':''));$$('cof').remove();loadPM(jobId);
+  }catch(e){toast(e.message,'error');}
+}
+async function approveCO(id,jobId){try{await upd('change_orders',id,{status:'approved'});toast('CO approved!');loadPM(jobId);}catch(e){toast(e.message,'error');}}
+
+async function pmPermits(jobId,c){
+  try{
+    const ps=await sb('permits',`?job_id=eq.${jobId}&order=created_at.desc`);
+    c.innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="showPermitForm('${jobId}')">+ Add Permit</button></div>
+      ${ps.length===0?`<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">No permits</div></div>`:
+      `<div class="table-wrap"><table><thead><tr><th>Type</th><th>Municipality</th><th>Applied</th><th>Expiry</th><th>Status</th></tr></thead><tbody>
+        ${ps.map(p=>`<tr><td style="font-weight:600">${p.permit_type}</td><td>${p.municipality||'—'}</td><td>${fmtD(p.application_date)}</td><td>${fmtD(p.expiry_date)}</td><td><span class="badge badge-${p.status==='approved'?'signed':'draft'}">${p.status}</span></td></tr>`).join('')}
+      </tbody></table></div>`}`;
+  }catch(e){c.innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+function showPermitForm(jobId){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="pmtf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">Add Permit</div><button class="form-close" onclick="$$('pmtf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row"><label>Type *</label><select id="pt-type"><option>Building</option><option>Electrical</option><option>Plumbing</option><option>Mechanical</option><option>Demo</option><option>Zoning</option><option>Fire</option></select></div>
+          <div class="form-row"><label>Municipality</label><input id="pt-muni" placeholder="Ulster County, NY"></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Application Date</label><input id="pt-app" type="date"></div>
+            <div class="form-row"><label>Expiry Date</label><input id="pt-exp" type="date"></div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Status</label><select id="pt-status"><option value="not_started">Not Started</option><option value="applied">Applied</option><option value="under_review">Under Review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
+            <div class="form-row"><label>Permit #</label><input id="pt-num" placeholder="2025-BLD-0042"></div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('pmtf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="savePermit('${jobId}')">Save</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function savePermit(jobId){
+  try{await ins('permits',{job_id:jobId,permit_type:$$('pt-type').value,municipality:$$('pt-muni').value,application_date:$$('pt-app').value||null,expiry_date:$$('pt-exp').value||null,status:$$('pt-status').value,permit_number:$$('pt-num').value});
+  toast('Permit saved!');$$('pmtf').remove();loadPM(jobId);}catch(e){toast(e.message,'error');}
+}
+
+// FINANCIAL
+async function pgFin(){
+  $$('content').innerHTML=`
+    <div class="tabs">
+      ${[['inv','Invoices'],['po','Purchase Orders'],['co','Change Orders'],['col','Collections']].map(([k,v],i)=>`<div class="tab ${i===0?'active':''}" onclick="finTab('${k}',this)">${v}</div>`).join('')}
+    </div>
+    <div id="fin-body"><div class="loading"><div class="spinner"></div></div></div>`;
+  finTab('inv');
+}
+async function finTab(tab,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));if(el)el.classList.add('active');
+  const c=$$('fin-body');c.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try{
+    if(tab==='inv'){
+      const invs=await sb('invoices','?order=created_at.desc');
+      c.innerHTML=`
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="showInvForm()">+ New Invoice</button></div>
+        ${invs.length===0?`<div class="empty"><div class="empty-icon">🧾</div><div class="empty-title">No invoices yet</div></div>`:
+        `<div class="table-wrap"><table><thead><tr><th>Invoice #</th><th>Amount</th><th>Paid</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+          ${invs.map(i=>`<tr><td style="font-weight:700;color:var(--amber)">${i.invoice_number||'—'}</td><td style="font-weight:600">${fmt$(i.amount)}</td><td style="color:var(--green)">${fmt$(i.amount_paid)}</td><td>${fmtD(i.due_date)}</td><td><span class="badge badge-${i.status}">${i.status}</span></td><td><button class="btn btn-ghost btn-sm" onclick="markPaid('${i.id}')">Mark Paid</button></td></tr>`).join('')}
+        </tbody></table></div>`}`;
+    } else if(tab==='po'){
+      const pos=await sb('purchase_orders','?order=created_at.desc');
+      c.innerHTML=`
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px"><button class="btn btn-primary" onclick="showPOForm()">+ New PO</button></div>
+        ${pos.length===0?`<div class="empty"><div class="empty-icon">📦</div><div class="empty-title">No purchase orders</div></div>`:
+        `<div class="table-wrap"><table><thead><tr><th>PO #</th><th>Supplier</th><th>Amount</th><th>Delivery</th><th>Status</th></tr></thead><tbody>
+          ${pos.map(p=>`<tr><td style="font-weight:700;color:var(--amber)">${p.po_number||'—'}</td><td>${p.supplier_name}</td><td style="font-weight:600">${fmt$(p.amount)}</td><td>${fmtD(p.expected_delivery)}</td><td><span class="badge badge-${p.status==='delivered'?'signed':'draft'}">${p.status}</span></td></tr>`).join('')}
+        </tbody></table></div>`}`;
+    } else if(tab==='co'){
+      const cos=await sb('change_orders','?order=created_at.desc');
+      c.innerHTML=`
+        <div class="stats-row" style="margin-bottom:16px">
+          <div class="stat-card"><div class="stat-value">${cos.length}</div><div class="stat-label">Total COs</div></div>
+          <div class="stat-card"><div class="stat-value">${fmt$(cos.reduce((s,c)=>s+(c.cost_impact||0),0))}</div><div class="stat-label">Total CO Value</div></div>
+          <div class="stat-card green"><div class="stat-value">${cos.filter(c=>c.status==='approved').length}</div><div class="stat-label">Approved</div></div>
+        </div>
+        ${cos.length===0?`<div class="empty"><div class="empty-icon">🔄</div><div class="empty-title">No change orders</div></div>`:
+        `<div class="table-wrap"><table><thead><tr><th>Title</th><th>Cost</th><th>Schedule</th><th>Status</th></tr></thead><tbody>
+          ${cos.map(c=>`<tr><td style="font-weight:600">${c.title}</td><td style="color:var(--amber)">${fmt$(c.cost_impact)}</td><td>${c.schedule_impact_days||0}d</td><td><span class="badge badge-${c.status}">${c.status}</span></td></tr>`).join('')}
+        </tbody></table></div>`}`;
+    } else if(tab==='col'){
+      const ov=await sb('invoices','?status=eq.overdue&order=due_date.asc');
+      c.innerHTML=`
+        <div class="stats-row" style="margin-bottom:16px">
+          <div class="stat-card red"><div class="stat-value">${fmt$(ov.reduce((s,i)=>s+(i.amount-i.amount_paid),0))}</div><div class="stat-label">Total Overdue</div></div>
+          <div class="stat-card"><div class="stat-value">${ov.length}</div><div class="stat-label">Overdue Invoices</div></div>
+        </div>
+        ${ov.length===0?`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">All clear — no overdue invoices</div></div>`:
+        ov.map(i=>`<div class="gk-item">
+          <div class="gk-header"><span class="gk-type">Overdue</span><span style="color:var(--amber);font-weight:700">${fmt$(i.amount-i.amount_paid)} owed</span></div>
+          <div class="gk-desc">Invoice ${i.invoice_number||'—'} · Due: ${fmtD(i.due_date)}</div>
+          <div class="gk-actions">
+            <button class="btn-approve" onclick="callBrief('${i.id}','${i.amount}','${i.due_date}')">🤖 Call Brief</button>
+            <button class="btn btn-ghost btn-sm" onclick="markPaid('${i.id}')">✅ Mark Paid</button>
+          </div>
+          <div id="cb-${i.id}"></div>
+        </div>`).join('')}`;
+    }
+  }catch(e){c.innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+
+function showInvForm(){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="ivf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">New Invoice</div><button class="form-close" onclick="$$('ivf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row-2">
+            <div class="form-row"><label>Invoice #</label><input id="iv-num" placeholder="INV-001"></div>
+            <div class="form-row"><label>Amount *</label><input id="iv-amt" type="number"></div>
+          </div>
+          <div class="form-row"><label>Description</label><input id="iv-desc" placeholder="Progress billing — Phase 3"></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Due Date</label><input id="iv-due" type="date"></div>
+            <div class="form-row"><label>Status</label><select id="iv-status"><option value="draft">Draft</option><option value="sent">Sent</option></select></div>
+          </div>
+          <div class="form-row" style="display:flex;align-items:center;gap:8px"><input id="iv-tax" type="checkbox"><label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);margin:0">Tax exempt client</label></div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('ivf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveInv()">Create</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function saveInv(){
+  const amt=parseFloat($$('iv-amt').value);if(!amt){toast('Amount required','error');return;}
+  try{await ins('invoices',{invoice_number:$$('iv-num').value||`INV-${Date.now().toString().slice(-4)}`,amount:amt,amount_paid:0,due_date:$$('iv-due').value||null,status:$$('iv-status').value,tax_exempt:$$('iv-tax').checked});
+  toast('Invoice created!');$$('ivf').remove();finTab('inv');}catch(e){toast(e.message,'error');}
+}
+async function markPaid(id){
+  try{const[i]=await sb('invoices',`?id=eq.${id}`);if(i)await upd('invoices',id,{status:'paid',amount_paid:i.amount,paid_date:new Date().toISOString().split('T')[0]});
+  toast('Marked as paid!');pgFin();}catch(e){toast(e.message,'error');}
+}
+
+function showPOForm(){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="pof">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">New Purchase Order</div><button class="form-close" onclick="$$('pof').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row-2">
+            <div class="form-row"><label>Supplier *</label><input id="po-sup" placeholder="Lowe's PRO Kingston"></div>
+            <div class="form-row"><label>Supplier Email</label><input id="po-email" type="email"></div>
+          </div>
+          <div class="form-row"><label>Description *</label><textarea id="po-desc" style="min-height:70px" placeholder="2x4 studs × 200 — framing lumber"></textarea></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Amount *</label><input id="po-amt" type="number"></div>
+            <div class="form-row"><label>Expected Delivery</label><input id="po-del" type="date"></div>
+          </div>
+          <div class="form-row"><label>Phase</label><select id="po-phase">${phases().map(p=>`<option>${p}</option>`).join('')}</select></div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('pof').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="savePO()">Create PO</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function savePO(){
+  const sup=$$('po-sup').value.trim(),amt=parseFloat($$('po-amt').value);
+  if(!sup||!amt){toast('Supplier and amount required','error');return;}
+  try{await ins('purchase_orders',{supplier_name:sup,supplier_email:$$('po-email').value,description:$$('po-desc').value,amount:amt,expected_delivery:$$('po-del').value||null,phase:$$('po-phase').value,status:'draft',po_number:`PO-${Date.now().toString().slice(-4)}`});
+  toast('PO created!');$$('pof').remove();finTab('po');}catch(e){toast(e.message,'error');}
+}
+
+async function callBrief(id,amount,due){
+  const el=$$(`cb-${id}`);el.innerHTML='<div class="loading" style="padding:8px"><div class="spinner"></div></div>';
+  try{const r=await ai(`Collections call brief: Invoice ${fmt$(amount)}, due ${fmtD(due)}. Give suggested tone, key talking point, what to avoid. Under 80 words.`);
+  el.innerHTML=`<div class="ai-answer" style="margin-top:8px"><div class="ai-answer-label">AI Call Brief</div>${r}</div>`;}
+  catch(e){el.innerHTML='';}
+}
+
+// SUBCONTRACTORS
+async function pgSubs(){
+  try{
+    const subs=await sb('subcontractors','?order=company_name.asc');
+    $$('content').innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn btn-primary" onclick="showSubForm()">+ Add Sub</button></div>
+      ${subs.length===0?`<div class="empty"><div class="empty-icon">🤝</div><div class="empty-title">No subcontractors yet</div><div class="empty-sub">Add your trusted subs and track compliance.</div></div>`:
+      `<div class="table-wrap"><table><thead><tr><th>Company</th><th>Trade</th><th>Contact</th><th>COI Expiry</th><th>Rating</th><th>Docs</th></tr></thead><tbody>
+        ${subs.map(s=>{const d=s.coi_expiry?Math.floor((new Date(s.coi_expiry)-Date.now())/86400000):null;return`<tr>
+          <td style="font-weight:700">${s.company_name}</td>
+          <td><span class="badge badge-contacted">${s.trade||'General'}</span></td>
+          <td><div style="font-size:12px">${s.contact_name||'—'}</div><div style="font-size:10px;color:var(--dim)">${s.phone||''}</div></td>
+          <td style="color:${d!==null&&d<30?'var(--red)':'var(--text)'}">${fmtD(s.coi_expiry)}${d!==null&&d<30?` ⚠️ ${d}d`:''}</td>
+          <td>${s.rating?'⭐'.repeat(Math.round(s.rating)):'—'}</td>
+          <td style="font-size:11px">${s.coi_url?'COI ✅ ':'COI ❌ '}${s.w9_url?'W9 ✅':'W9 ❌'}</td>
+        </tr>`}).join('')}
+      </tbody></table></div>`}`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+function showSubForm(){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="sbf">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">Add Subcontractor</div><button class="form-close" onclick="$$('sbf').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row-2">
+            <div class="form-row"><label>Company *</label><input id="sb-co" placeholder="Mike's Tile Co."></div>
+            <div class="form-row"><label>Trade *</label><select id="sb-trade"><option>Tile</option><option>Framing</option><option>Electrical</option><option>Plumbing</option><option>HVAC</option><option>Roofing</option><option>Painting</option><option>Insulation</option><option>Drywall</option><option>Flooring</option><option>Cabinets</option><option>Concrete</option><option>Excavation</option><option>General</option></select></div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row"><label>Contact</label><input id="sb-contact"></div>
+            <div class="form-row"><label>Phone</label><input id="sb-phone"></div>
+          </div>
+          <div class="form-row"><label>Email</label><input id="sb-email" type="email"></div>
+          <div class="form-row-2">
+            <div class="form-row"><label>COI Expiry</label><input id="sb-coi" type="date"></div>
+            <div class="form-row"><label>Rating (1-5)</label><input id="sb-rating" type="number" min="1" max="5"></div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('sbf').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveSub()">Add Sub</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function saveSub(){
+  const co=$$('sb-co').value.trim();if(!co){toast('Company required','error');return;}
+  try{await ins('subcontractors',{company_name:co,trade:$$('sb-trade').value,contact_name:$$('sb-contact').value,phone:$$('sb-phone').value,email:$$('sb-email').value,coi_expiry:$$('sb-coi').value||null,rating:parseFloat($$('sb-rating').value)||null});
+  toast('Sub added!');$$('sbf').remove();pgSubs();}catch(e){toast(e.message,'error');}
+}
+
+// FILES
+async function pgFiles(){
+  try{
+    const docs=await sb('documents','?order=created_at.desc');
+    $$('content').innerHTML=`
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn btn-primary" onclick="showFileForm()">+ Add Document</button></div>
+      ${docs.length===0?`<div class="empty"><div class="empty-icon">📁</div><div class="empty-title">No files yet</div></div>`:
+      `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Category</th><th>Client Visible</th><th>Date</th></tr></thead><tbody>
+        ${docs.map(d=>`<tr><td style="font-weight:600">📄 ${d.name}</td><td><span class="badge badge-draft">${d.category||'General'}</span></td><td>${d.visible_to_client?'✅':'—'}</td><td style="font-size:11px;color:var(--dim)">${fmtD(d.created_at)}</td></tr>`).join('')}
+      </tbody></table></div>`}`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+function showFileForm(){
+  document.body.insertAdjacentHTML('beforeend',`
+    <div class="form-overlay" id="fff">
+      <div class="form-modal">
+        <div class="form-header"><div class="form-title">Add Document</div><button class="form-close" onclick="$$('fff').remove()">×</button></div>
+        <div class="form-body">
+          <div class="form-row"><label>Name *</label><input id="ff-name" placeholder="Johnson Contract v2.pdf"></div>
+          <div class="form-row"><label>Category</label><select id="ff-cat"><option>Contract</option><option>Plans</option><option>Permit</option><option>Invoice</option><option>Photo</option><option>Insurance</option><option>Warranty</option><option>General</option></select></div>
+          <div class="form-row"><label>File URL</label><input id="ff-url" placeholder="https://..."></div>
+          <div class="form-row" style="display:flex;align-items:center;gap:8px"><input id="ff-vis" type="checkbox"><label style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);margin:0">Visible in client portal</label></div>
+        </div>
+        <div class="form-footer">
+          <button class="btn btn-ghost" onclick="$$('fff').remove()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveFile()">Save</button>
+        </div>
+      </div>
+    </div>`);
+}
+async function saveFile(){
+  const name=$$('ff-name').value.trim();if(!name){toast('Name required','error');return;}
+  try{await ins('documents',{name,category:$$('ff-cat').value,file_url:$$('ff-url').value||'#',visible_to_client:$$('ff-vis').checked});
+  toast('File saved!');$$('fff').remove();pgFiles();}catch(e){toast(e.message,'error');}
+}
+
+// MESSAGES
+async function pgMsgs(){
+  try{
+    const[msgs,jobs]=await Promise.all([sb('messages','?order=created_at.desc&limit=30'),sb('jobs','?select=id,job_name&status=eq.active')]);
+    $$('content').innerHTML=`
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">New Message</div></div>
+        <div class="form-row"><label>Job (optional)</label><select id="msg-job"><option value="">General</option>${jobs.map(j=>`<option value="${j.id}">${j.job_name}</option>`).join('')}</select></div>
+        <div class="form-row"><textarea id="msg-body" style="min-height:80px" placeholder="Type your message..."></textarea></div>
+        <button class="btn btn-primary" onclick="sendMsg()">Send</button>
+      </div>
+      ${msgs.length===0?`<div class="empty"><div class="empty-icon">💬</div><div class="empty-title">No messages yet</div></div>`:
+      msgs.map(m=>`<div class="log-card" style="margin-bottom:6px">
+        <div class="log-header"><span style="font-size:11px;font-weight:700">${fmtD(m.created_at)}</span><span style="font-size:10px;color:var(--dim)">${new Date(m.created_at).toLocaleTimeString()}</span></div>
+        <div style="font-size:13px">${m.body}</div>
+      </div>`).join('')}`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+async function sendMsg(){
+  const body=$$('msg-body').value.trim();if(!body){toast('Message empty','error');return;}
+  try{await ins('messages',{body,job_id:$$('msg-job').value||null});toast('Sent!');$$('msg-body').value='';pgMsgs();}catch(e){toast(e.message,'error');}
+}
+
+// GATEKEEPER
+async function pgGK(){
+  try{
+    const items=await sb('gatekeeper_queue','?status=eq.pending&order=created_at.desc');
+    $$('gk-badge').textContent=items.length;
+    $$('content').innerHTML=`
+      <div style="margin-bottom:16px;font-size:13px;color:var(--muted)">${items.length} decision${items.length!==1?'s':''} waiting</div>
+      ${items.length===0?`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">All clear</div><div class="empty-sub">No pending decisions.</div></div>`:
+      items.map(i=>`<div class="gk-item">
+        <div class="gk-header">
+          <span class="gk-type">${(i.item_type||'').replace(/_/g,' ')}</span>
+          ${i.amount?`<span style="color:var(--amber);font-weight:700">${fmt$(i.amount)}</span>`:''}
+          ${i.priority==='urgent'?'<span style="color:var(--red);font-size:11px;font-weight:700">🚨 URGENT</span>':''}
+        </div>
+        <div class="gk-title">${i.title}</div>
+        ${i.description?`<div class="gk-desc">${i.description}</div>`:''}
+        ${i.ai_recommendation?`<div class="gk-ai"><div class="gk-ai-label">🤖 AI Recommendation</div>${i.ai_recommendation}</div>`:''}
+        <div class="gk-actions">
+          <button class="btn-approve" onclick="gkDo('${i.id}','approved')">✅ Approve</button>
+          <button class="btn-reject" onclick="gkDo('${i.id}','rejected')">❌ Reject</button>
+          <button class="btn btn-ghost btn-sm" onclick="gkAI('${i.id}','${i.title}','${(i.description||'').replace(/'/g,'').substring(0,100)}',${i.amount||0})">🤖 Ask AI</button>
+        </div>
+        <div id="gkai-${i.id}"></div>
+      </div>`).join('')}`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+async function gkDo(id,status){try{await upd('gatekeeper_queue',id,{status,decided_at:new Date().toISOString()});toast(status==='approved'?'Approved ✅':'Rejected ❌');pgGK();}catch(e){toast(e.message,'error');}}
+async function gkAI(id,title,desc,amount){
+  const el=$$(`gkai-${id}`);el.innerHTML='<div class="loading" style="padding:6px"><div class="spinner"></div></div>';
+  try{const r=await ai(`Approve or reject? Title: ${title}. Desc: ${desc}. Amount: ${fmt$(amount)}. 2 sentences max.`);
+  el.innerHTML=`<div class="ai-answer" style="margin-top:8px"><div class="ai-answer-label">AI Advice</div>${r}</div>`;}
+  catch(e){el.innerHTML='';}
+}
+
+// REPORTS
+async function pgReports(){
+  try{
+    const[leads,jobs,invs,cos]=await Promise.all([sb('leads','?select=stage,estimated_value,lead_source'),sb('jobs','?select=status,budget,actual_cost,percent_complete'),sb('invoices','?select=amount,amount_paid,status'),sb('change_orders','?select=cost_impact,status')]);
+    const rev=invs.filter(i=>i.status==='paid').reduce((s,i)=>s+i.amount,0);
+    const out=invs.filter(i=>i.status!=='paid'&&i.status!=='void').reduce((s,i)=>s+(i.amount-i.amount_paid),0);
+    const pipe=leads.reduce((s,l)=>s+(l.estimated_value||0),0);
+    const conv=leads.length>0?Math.round(leads.filter(l=>l.stage==='signed').length/leads.length*100):0;
+    const src={};leads.forEach(l=>{if(l.lead_source)src[l.lead_source]=(src[l.lead_source]||0)+1;});
+    $$('content').innerHTML=`
+      <div class="stats-row">
+        <div class="stat-card green"><div class="stat-value">${fmt$(rev)}</div><div class="stat-label">Revenue Collected</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt$(out)}</div><div class="stat-label">Outstanding AR</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt$(pipe)}</div><div class="stat-label">Pipeline Value</div></div>
+        <div class="stat-card blue"><div class="stat-value">${conv}%</div><div class="stat-label">Lead Conversion</div></div>
+        <div class="stat-card"><div class="stat-value">${fmt$(cos.reduce((s,c)=>s+(c.cost_impact||0),0))}</div><div class="stat-label">Total CO Value</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Leads by Source</div></div>
+          ${Object.entries(src).length===0?'<div style="color:var(--dim);font-size:12px">No leads yet</div>':
+          Object.entries(src).sort((a,b)=>b[1]-a[1]).map(([s,n])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:12px;flex:1">${s}</span><span style="font-size:12px;font-weight:700;color:var(--amber)">${n}</span></div>`).join('')}
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Jobs by Status</div></div>
+          ${['active','on_hold','completed'].map(s=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="badge badge-${s}">${s}</span><span style="font-size:14px;font-weight:700;flex:1">${jobs.filter(j=>j.status===s).length}</span></div>`).join('')}
+        </div>
+      </div>`;
+  }catch(e){$$('content').innerHTML=`<div class="empty"><div class="empty-title">Error: ${e.message}</div></div>`;}
+}
+
+// SETTINGS
+function pgSettings(){
+  const feat={'Financial':['AIA G702/G703 billing','Retainage tracking','Progress billing','Collections dashboard','Cash flow forecasting','1099 engine'],'Change Orders':['AI Zoom detection','Multi-level approval','Budget auto-update','CO version history'],'Purchase Orders':['Auto-PO from estimate','Delivery confirmation','Vendor price comparison'],'Field':['GPS clock-in','Voice daily logs','AI log structuring','Safety logging'],'AI Features':['AI story tracker','AI risk scoring','AI schedule optimizer','AI collections brief'],'Reports':['Job profitability','Lead conversion','Sub performance','Cash flow','Safety incidents']};
+  const saved=JSON.parse(localStorage.getItem('cs-settings')||'{}');
+  $$('content').innerHTML=`
+    <div class="card">
+      <div class="card-header"><div class="card-title">⚙️ Feature Toggles</div><button class="btn btn-primary btn-sm" onclick="saveSettings()">Save Settings</button></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Toggle any feature ON or OFF. When OFF it's hidden from the entire app.</div>
+      ${Object.entries(feat).map(([sec,items])=>`
+        <div style="margin-bottom:24px">
+          <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:10px">${sec}</div>
+          ${items.map(item=>{const k=item.toLowerCase().replace(/[^a-z0-9]/g,'-');const on=saved[k]!==false;return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:13px">${item}</span>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:${on?'var(--green)':'var(--dim)'};text-transform:none;letter-spacing:0">
+              <input type="checkbox" id="s-${k}" ${on?'checked':''} onchange="this.parentElement.style.color=this.checked?'var(--green)':'var(--dim)';this.parentElement.lastChild.textContent=this.checked?'ON':'OFF'">
+              ${on?'ON':'OFF'}
+            </label>
+          </div>`;}).join('')}
+        </div>`).join('')}
+    </div>`;
+}
+function saveSettings(){
+  const s={};document.querySelectorAll('[id^="s-"]').forEach(el=>s[el.id.slice(2)]=el.checked);
+  localStorage.setItem('cs-settings',JSON.stringify(s));toast('Settings saved!');
+}
+function pgNotFound(){$$('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div><div class="empty-title">Coming Soon</div></div>';}
+
+go('dashboard');
+</script>
+</body>
+</html>
