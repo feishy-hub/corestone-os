@@ -6,224 +6,347 @@
 <title>Corestone OS</title>
 <style>
 :root {
-  --bg:#eef1f5;--surface:#ffffff;--card:#ffffff;--border:#c8d0da;--border2:#a8b4c0;
-  --text:#0f1923;--muted:#3a4a5a;--dim:#6a7a8a;
-  --teal:#0a8a7e;--teal-dark:#076b61;--teal-dim:rgba(10,138,126,0.12);
-  --amber:#f5a623;--amber-dim:rgba(245,166,35,0.12);
-  --green:#28a745;--green-dim:rgba(40,167,69,0.12);
-  --red:#dc3545;--red-dim:rgba(220,53,69,0.12);
-  --blue:#1a6bb5;--blue-dim:rgba(26,107,181,0.10);
+  --bg:#f0f2f5;--surface:#ffffff;--card:#ffffff;--border:#d0d7de;--border2:#9aa5b4;
+  --text:#111827;--muted:#374151;--dim:#6b7280;
+  --teal:#0d9488;--teal-dark:#0f766e;--teal-dim:rgba(13,148,136,0.12);
+  --amber:#d97706;--amber-dim:rgba(217,119,6,0.12);
+  --green:#16a34a;--green-dim:rgba(22,163,74,0.12);
+  --red:#dc2626;--red-dim:rgba(220,38,38,0.12);
+  --blue:#1d4ed8;--blue-dim:rgba(29,78,216,0.10);
   --radius:8px;--radius-sm:5px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;display:flex;}
-#sidebar{width:220px;min-height:100vh;background:var(--teal-dark);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;box-shadow:2px 0 8px rgba(0,0,0,0.15);}
-.logo{padding:18px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.15);}
-.logo-text{font-size:17px;font-weight:800;color:#ffffff;letter-spacing:0.04em;}
-.logo-sub{font-size:9px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.14em;margin-top:2px;}
-.nav-section{padding:8px 8px 4px;}
-.nav-label{font-size:9px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.14em;padding:4px 8px 6px;}
-.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,0.75);font-size:13px;font-weight:500;transition:all 0.15s;margin-bottom:1px;}
-.nav-item:hover{background:rgba(255,255,255,0.12);color:#fff;}
-.nav-item.active{background:rgba(255,255,255,0.2);color:#fff;font-weight:700;}
-.nav-icon{font-size:15px;width:20px;text-align:center;}
-.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;}
-.sidebar-bottom{margin-top:auto;padding:12px;border-top:1px solid rgba(255,255,255,0.15);}
-.user-chip{display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radius-sm);cursor:pointer;}
-.user-chip:hover{background:rgba(255,255,255,0.1);}
-.avatar{width:30px;height:30px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
-.user-name{font-size:12px;font-weight:600;color:#fff;}
-.user-role{font-size:10px;color:rgba(255,255,255,0.55);}
-#main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column;}
-.topbar{height:54px;background:var(--teal);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:50;box-shadow:0 2px 6px rgba(0,0,0,0.15);}
-.page-title{font-size:16px;font-weight:700;color:#fff;}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
-.content{padding:24px;flex:1;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;display:flex;flex-direction:column;}
+
+/* TOP HEADER */
+#header{height:52px;background:#0f766e;display:flex;align-items:center;padding:0 16px;gap:0;position:fixed;top:0;left:0;right:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+.header-logo{font-size:16px;font-weight:900;color:#fff;letter-spacing:0.04em;padding-right:20px;border-right:1px solid rgba(255,255,255,0.2);margin-right:4px;white-space:nowrap;}
+.header-logo span{color:#fbbf24;}
+.top-nav{display:flex;align-items:stretch;height:52px;overflow-x:auto;}
+.top-nav-item{display:flex;align-items:center;gap:6px;padding:0 14px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.8);cursor:pointer;border-bottom:3px solid transparent;transition:all 0.15s;white-space:nowrap;position:relative;}
+.top-nav-item:hover{color:#fff;background:rgba(255,255,255,0.1);}
+.top-nav-item.active{color:#fff;border-bottom-color:#fbbf24;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px;padding-left:10px;}
+.header-search{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:6px;padding:6px 12px;color:#fff;font-size:13px;width:180px;outline:none;}
+.header-search::placeholder{color:rgba(255,255,255,0.6);}
+.header-search:focus{background:rgba(255,255,255,0.25);}
+.nav-badge-top{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:2px;}
+.avatar-btn{width:32px;height:32px;border-radius:50%;background:#fbbf24;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#111;cursor:pointer;}
+
+/* APP BODY */
+#app-body{display:flex;flex:1;margin-top:52px;min-height:calc(100vh - 52px);}
+
+/* LEFT JOB SIDEBAR */
+#job-sidebar{width:240px;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;left:0;top:52px;bottom:0;z-index:100;overflow:hidden;}
+.js-header{padding:10px 12px;border-bottom:1px solid var(--border);background:#f8fafc;}
+.js-search{width:100%;background:#fff;border:1.5px solid var(--border2);border-radius:5px;padding:7px 10px;font-size:13px;color:var(--text);}
+.js-search:focus{outline:none;border-color:var(--teal);}
+.js-list{flex:1;overflow-y:auto;}
+.js-section{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;padding:10px 12px 4px;}
+.js-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0f2f5;transition:background 0.1s;border-left:3px solid transparent;}
+.js-item:hover{background:#f0fdf4;}
+.js-item.active{background:#ecfdf5;border-left-color:var(--teal);}
+.js-name{font-size:13px;font-weight:600;color:var(--text);}
+.js-sub{font-size:11px;color:var(--dim);margin-top:2px;}
+.js-add{margin:10px 12px;width:calc(100% - 24px);background:var(--teal);color:#fff;border:none;border-radius:6px;padding:8px;font-size:13px;font-weight:700;cursor:pointer;}
+.js-add:hover{background:var(--teal-dark);}
+
+/* MAIN CONTENT */
+#main{margin-left:240px;flex:1;display:flex;flex-direction:column;}
+.content-tabs-bar{background:#fff;border-bottom:2px solid var(--border);display:flex;align-items:stretch;min-height:44px;position:sticky;top:52px;z-index:50;overflow-x:auto;}
+.ctab{display:flex;align-items:center;gap:5px;padding:0 16px;font-size:13px;font-weight:600;color:var(--dim);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all 0.15s;}
+.ctab:hover{color:var(--teal);}
+.ctab.active{color:var(--teal);border-bottom-color:var(--teal);}
+.ctab-actions{margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 16px;}
+.content-body{padding:20px 24px;flex:1;}
+
+/* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;}
 .btn-primary{background:var(--teal);color:#fff;}
 .btn-primary:hover{background:var(--teal-dark);}
-.btn-ghost{background:#fff;color:var(--muted);border:1px solid var(--border2);}
+.btn-ghost{background:#fff;color:var(--muted);border:1.5px solid var(--border2);}
 .btn-ghost:hover{background:var(--bg);color:var(--text);}
-.btn-topbar{background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;}
-.btn-topbar:hover{background:rgba(255,255,255,0.3);}
-.btn-sm{padding:5px 10px;font-size:11px;}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
-.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid var(--red);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .card-title{font-size:14px;font-weight:700;color:var(--text);}
+
+/* STATS */
 .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
-.stat-value{font-size:22px;font-weight:700;color:var(--teal);line-height:1;margin-bottom:4px;}
-.stat-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.08em;}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.stat-value{font-size:26px;font-weight:800;color:var(--teal);line-height:1;margin-bottom:4px;}
+.stat-label{font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:0.08em;}
 .stat-card.green .stat-value{color:var(--green);}
 .stat-card.red .stat-value{color:var(--red);}
 .stat-card.blue .stat-value{color:var(--blue);}
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
-.badge-new,.badge-draft{background:var(--blue-dim);color:var(--blue);}
-.badge-contacted,.badge-on_hold,.badge-sent{background:#fff3e0;color:#e65100;}
-.badge-proposal{background:rgba(175,82,222,0.15);color:#af52de;}
-.badge-negotiating,.badge-pending{background:rgba(255,214,10,0.15);color:#ffd60a;}
-.badge-signed,.badge-active,.badge-paid,.badge-approved,.badge-completed{background:var(--green-dim);color:var(--green);}
-.badge-lost,.badge-overdue,.badge-rejected{background:var(--red-dim);color:var(--red);}
-.table-wrap{overflow-x:auto;}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
+.badge-new{background:#dbeafe;color:#1d4ed8;}
+.badge-draft{background:#f3f4f6;color:#374151;border:1px solid #d1d5db;}
+.badge-contacted,.badge-sent,.badge-on_hold{background:#fef3c7;color:#92400e;}
+.badge-proposal{background:#f3e8ff;color:#6b21a8;}
+.badge-negotiating,.badge-pending{background:#fff7ed;color:#c2410c;}
+.badge-signed,.badge-active,.badge-paid,.badge-approved,.badge-completed,.badge-delivered{background:#dcfce7;color:#15803d;}
+.badge-lost,.badge-overdue,.badge-rejected{background:#fee2e2;color:#991b1b;}
+
+/* TABLES */
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);background:#fff;}
 table{width:100%;border-collapse:collapse;}
-th{text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;padding:8px 12px;border-bottom:1px solid var(--border);}
-td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle;}
-tr:hover td{background:rgba(255,255,255,0.02);}
+th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;padding:10px 14px;border-bottom:2px solid var(--border);background:#f8fafc;white-space:nowrap;}
+td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);vertical-align:middle;}
 tr:last-child td{border-bottom:none;}
-.form-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
-.form-modal{background:var(--card);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
-.form-header{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
-.form-title{font-size:16px;font-weight:700;}
-.form-close{width:28px;height:28px;border-radius:50%;background:var(--border);border:none;color:var(--muted);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
-.form-close:hover{background:var(--border2);color:var(--text);}
+tr:hover td{background:#f8fafc;}
+
+/* FORMS */
+.form-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
+.form-modal{background:#fff;border-radius:12px;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.form-header{padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.form-title{font-size:16px;font-weight:700;color:var(--text);}
+.form-close{width:28px;height:28px;border-radius:50%;background:#f3f4f6;border:none;color:#666;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;}
+.form-close:hover{background:#e5e7eb;}
 .form-body{padding:0 20px 20px;}
 .form-row{margin-bottom:14px;}
 .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
-label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;}
-input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;font-family:inherit;transition:border 0.15s;}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);}
+label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;}
+input,select,textarea{width:100%;background:#fff;border:1.5px solid var(--border2);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:14px;font-family:inherit;transition:border 0.15s;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,0.1);}
 textarea{resize:vertical;min-height:80px;}
-select option{background:var(--card);}
-.form-footer{display:flex;gap:8px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--border);}
+.form-footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border);background:#f8fafc;border-radius:0 0 12px 12px;}
+
+/* MISC */
 #toast{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
-.toast-item{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;animation:slideIn 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
-.toast-item.success{border-color:var(--green);}
-.toast-item.error{border-color:var(--red);}
+.toast-item{background:#fff;border-left:4px solid var(--teal);border-radius:6px;padding:10px 16px;font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:8px;animation:slideIn 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.15);}
+.toast-item.error{border-left-color:var(--red);}
 @keyframes slideIn{from{transform:translateX(100px);opacity:0;}to{transform:translateX(0);opacity:1;}}
-.pipeline{display:grid;grid-template-columns:repeat(6,minmax(170px,1fr));gap:10px;overflow-x:auto;padding-bottom:8px;}
-.col-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;background:var(--surface);border:1px solid var(--border);border-bottom:none;}
-.col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);}
-.col-count{font-size:10px;color:var(--dim);background:var(--border);padding:1px 6px;border-radius:10px;}
-.col-body{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);min-height:280px;padding:8px;display:flex;flex-direction:column;gap:6px;}
-.lead-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;cursor:pointer;transition:all 0.15s;}
-.lead-card:hover{border-color:var(--teal);background:var(--card);}
-.lead-name{font-size:12px;font-weight:700;margin-bottom:3px;}
-.lead-type{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.empty{text-align:center;padding:48px 20px;color:var(--dim);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-title{font-size:16px;font-weight:700;color:var(--muted);margin-bottom:6px;}
+.empty-sub{font-size:13px;margin-bottom:20px;}
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;color:var(--dim);gap:10px;}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.log-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px;overflow-x:auto;}
+.tab{padding:10px 16px;font-size:13px;font-weight:600;color:var(--dim);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all 0.15s;}
+.tab:hover{color:var(--teal);}
+.tab.active{color:var(--teal);border-bottom-color:var(--teal);}
+.pipeline{display:grid;grid-template-columns:repeat(6,minmax(160px,1fr));gap:10px;overflow-x:auto;padding-bottom:8px;}
+.col-header{padding:8px 10px;border-radius:5px 5px 0 0;background:var(--teal);display:flex;align-items:center;justify-content:space-between;}
+.col-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#fff;}
+.col-count{font-size:10px;color:rgba(255,255,255,0.85);background:rgba(0,0,0,0.2);padding:1px 6px;border-radius:10px;}
+.col-body{border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;min-height:280px;padding:8px;display:flex;flex-direction:column;gap:6px;background:#fff;}
+.lead-card{background:#fff;border:1px solid var(--border);border-radius:5px;padding:10px;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+.lead-card:hover{border-color:var(--teal);box-shadow:0 2px 8px rgba(13,148,136,0.2);}
+.lead-name{font-size:13px;font-weight:700;margin-bottom:3px;color:var(--text);}
+.lead-type{font-size:11px;color:var(--dim);margin-bottom:6px;}
 .lead-meta{display:flex;align-items:center;justify-content:space-between;}
 .lead-value{font-size:12px;font-weight:700;color:var(--teal);}
 .lead-days{font-size:10px;color:var(--dim);}
-.jobs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
-.job-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;cursor:pointer;transition:all 0.15s;}
-.job-card:hover{border-color:var(--teal);transform:translateY(-1px);}
-.job-name{font-size:14px;font-weight:700;}
-.job-client{font-size:12px;color:var(--muted);margin-top:2px;}
-.progress-bar{height:4px;background:var(--border);border-radius:2px;margin:10px 0 8px;overflow:hidden;}
-.progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--teal),var(--green));}
-.empty{text-align:center;padding:48px 20px;color:var(--dim);}
-.empty-icon{font-size:40px;margin-bottom:12px;}
-.empty-title{font-size:15px;font-weight:700;color:var(--muted);margin-bottom:6px;}
-.empty-sub{font-size:13px;margin-bottom:20px;}
-.loading{display:flex;align-items:center;justify-content:center;padding:48px;color:var(--dim);gap:10px;}
-.spinner{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:8px;}
-.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto;}
-.tab{padding:8px 14px;font-size:13px;font-weight:500;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
-.tab:hover{color:var(--muted);}
-.tab.active{color:var(--teal);border-bottom-color:var(--teal);}
-.gk-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;}
+.gk-item{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
 .gk-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
-.gk-type{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--teal);background:var(--amber-dim);padding:2px 8px;border-radius:20px;}
-.gk-title{font-size:14px;font-weight:700;margin-bottom:6px;}
-.gk-desc{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
-.gk-ai{background:var(--blue-dim);border:1px solid rgba(10,132,255,0.2);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;font-size:12px;line-height:1.6;}
-.gk-ai-label{font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px;}
+.gk-type{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--teal);background:var(--teal-dim);padding:2px 8px;border-radius:20px;}
+.gk-title{font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text);}
+.gk-desc{font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
 .gk-actions{display:flex;gap:8px;flex-wrap:wrap;}
-.btn-approve{background:var(--green-dim);color:var(--green);border:1px solid var(--green);padding:7px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;}
-.btn-approve:hover{background:var(--green);color:#000;}
-.btn-reject{background:var(--red-dim);color:var(--red);border:1px solid var(--red);padding:7px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;}
-.btn-reject:hover{background:var(--red);color:#fff;}
-.ai-answer{background:var(--blue-dim);border:1px solid rgba(10,132,255,0.2);border-radius:var(--radius-sm);padding:12px;margin-top:10px;font-size:12px;line-height:1.7;}
-.ai-answer-label{font-size:9px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+.btn-approve{background:#dcfce7;color:#15803d;border:1.5px solid #16a34a;padding:8px 18px;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-approve:hover{background:#16a34a;color:#fff;}
+.btn-reject{background:#fee2e2;color:#991b1b;border:1.5px solid #dc2626;padding:8px 18px;border-radius:5px;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-reject:hover{background:#dc2626;color:#fff;}
+.ai-answer{background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--radius);padding:12px;margin-top:10px;font-size:13px;line-height:1.7;color:var(--text);}
+.ai-answer-label{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
+.progress-bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--green));}
 input[type=checkbox]{width:auto!important;accent-color:var(--teal);}
-@media(max-width:768px){#sidebar{width:56px;}.logo-text,.logo-sub,.nav-item span:not(.nav-icon),.user-name,.user-role{display:none;}#main{margin-left:56px;}.pipeline{grid-template-columns:1fr 1fr;}.form-row-2{grid-template-columns:1fr;}}
+@media(max-width:900px){#job-sidebar{display:none;}#main{margin-left:0;}}
 </style>
 </head>
 <body>
-<nav id="sidebar">
-  <div class="logo"><div class="logo-text">CORESTONE</div><div class="logo-sub">Construction OS</div></div>
-  <div class="nav-section">
-    <div class="nav-label">Main</div>
-    <div class="nav-item active" onclick="go('dashboard')"><span class="nav-icon">⚡</span><span>Command Center</span></div>
-    <div class="nav-item" onclick="go('sales')"><span class="nav-icon">📥</span><span>Sales</span></div>
-    <div class="nav-item" onclick="go('jobs')"><span class="nav-icon">🏗️</span><span>Jobs</span></div>
-    <div class="nav-item" onclick="go('pm')"><span class="nav-icon">📋</span><span>Project Mgmt</span></div>
+
+<!-- TOP HEADER BAR -->
+<div id="header">
+  <div class="header-logo">CORE<span>STONE</span></div>
+  <nav class="top-nav">
+    <div class="top-nav-item active" onclick="go('dashboard')" id="nav-dashboard">⚡ <span>Command</span></div>
+    <div class="top-nav-item" onclick="go('sales')" id="nav-sales">📥 <span>Sales</span></div>
+    <div class="top-nav-item" onclick="go('jobs')" id="nav-jobs">🏗️ <span>Jobs</span></div>
+    <div class="top-nav-item" onclick="go('financial')" id="nav-financial">💰 <span>Financial</span></div>
+    <div class="top-nav-item" onclick="go('subs')" id="nav-subs">🤝 <span>Subs</span></div>
+    <div class="top-nav-item" onclick="go('files')" id="nav-files">📁 <span>Files</span></div>
+    <div class="top-nav-item" onclick="go('messages')" id="nav-messages">💬 <span>Messages</span></div>
+    <div class="top-nav-item" onclick="go('gatekeeper')" id="nav-gatekeeper">🔑 <span>Gatekeeper</span><span class="nav-badge-top" id="gk-badge">0</span></div>
+    <div class="top-nav-item" onclick="go('reports')" id="nav-reports">📊 <span>Reports</span></div>
+    <div class="top-nav-item" onclick="go('settings')" id="nav-settings">⚙️</div>
+  </nav>
+  <div class="header-right">
+    <input class="header-search" placeholder="🔍 Search jobs, clients..." oninput="globalSearch(this.value)" id="global-search">
+    <div class="avatar-btn" title="Feishy Felberbaum — Owner">FF</div>
   </div>
-  <div class="nav-section">
-    <div class="nav-label">Operations</div>
-    <div class="nav-item" onclick="go('financial')"><span class="nav-icon">💰</span><span>Financial</span></div>
-    <div class="nav-item" onclick="go('subs')"><span class="nav-icon">🤝</span><span>Subcontractors</span></div>
-    <div class="nav-item" onclick="go('files')"><span class="nav-icon">📁</span><span>Files & Media</span></div>
-    <div class="nav-item" onclick="go('messages')"><span class="nav-icon">💬</span><span>Messaging</span></div>
+</div>
+
+<div id="app-body">
+  <!-- LEFT JOB SIDEBAR -->
+  <div id="job-sidebar">
+    <div class="js-header">
+      <input class="js-search" placeholder="🔍 Search jobs & clients..." oninput="filterJobSidebar(this.value)" id="js-search-input">
+    </div>
+    <div class="js-list" id="js-list">
+      <div class="loading" style="padding:20px"><div class="spinner"></div></div>
+    </div>
+    <button class="js-add" onclick="showJobForm()">+ New Job</button>
   </div>
-  <div class="nav-section">
-    <div class="nav-label">Intelligence</div>
-    <div class="nav-item" onclick="go('gatekeeper')"><span class="nav-icon">🔑</span><span>Gatekeeper</span><span class="nav-badge" id="gk-badge">0</span></div>
-    <div class="nav-item" onclick="go('reports')"><span class="nav-icon">📊</span><span>Reports</span></div>
-    <div class="nav-item" onclick="go('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></div>
-  </div>
-  <div class="sidebar-bottom">
-    <div class="user-chip"><div class="avatar">FF</div><div><div class="user-name">Feishy F.</div><div class="user-role">Owner</div></div></div>
-  </div>
-</nav>
-<div id="main">
-  <div class="topbar">
-    <div class="page-title" id="page-title">Command Center</div>
-    <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="renderPage(CUR)">↻ Refresh</button>
-      <div style="font-size:11px;color:var(--dim)" id="ts"></div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+    <div class="content-tabs-bar" id="content-tabs-bar" style="display:none"></div>
+    <div class="content-body" id="content">
+      <div class="loading"><div class="spinner"></div>Loading...</div>
     </div>
   </div>
-  <div class="content" id="content"><div class="loading"><div class="spinner"></div>Loading...</div></div>
 </div>
+
 <div id="toast"></div>
+<div id="search-results" style="position:fixed;top:52px;right:0;width:320px;background:#fff;border:1px solid var(--border);border-radius:0 0 10px 10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:250;display:none;max-height:400px;overflow-y:auto"></div>
 <script>
+
 const SB='https://xecrebsxborvknsvuqdn.supabase.co';
 const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlY3JlYnN4Ym9ydmtuc3Z1cWRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDY3MjUsImV4cCI6MjA5NjYyMjcyNX0.GB9K01mI35XCJRli-Ywtvpjlc-1BoO9jFz9tdfioLgk';
 const AK='ANTHROPIC_KEY_HERE';
 let CUR='dashboard',JOB=null,PMTAB='logs';
+let allJobs=[];
 
-async function sb(table,params=''){
-  const r=await fetch(`${SB}/rest/v1/${table}${params}`,{headers:{apikey:SK,Authorization:`Bearer ${SK}`}});
-  if(!r.ok)throw new Error(await r.text());return r.json();
-}
-async function ins(table,data){
-  const r=await fetch(`${SB}/rest/v1/${table}`,{method:'POST',headers:{apikey:SK,Authorization:`Bearer ${SK}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(data)});
-  if(!r.ok){const e=await r.json();throw new Error(e.message||'Insert failed');}return r.json();
-}
-async function upd(table,id,data){
-  const r=await fetch(`${SB}/rest/v1/${table}?id=eq.${id}`,{method:'PATCH',headers:{apikey:SK,Authorization:`Bearer ${SK}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(data)});
-  if(!r.ok)throw new Error('Update failed');return r.json();
-}
-async function ai(prompt,sys='You are a construction AI for Corestone OS in Hudson Valley NY. Be concise.'){
-  const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,system:sys,messages:[{role:'user',content:prompt}]})});
-  const d=await r.json();return d.content?.[0]?.text||'';
-}
-function toast(msg,type='success'){
-  const el=document.createElement('div');el.className=`toast-item ${type}`;
-  el.innerHTML=(type==='success'?'✅':'❌')+' '+msg;
-  document.getElementById('toast').appendChild(el);setTimeout(()=>el.remove(),3500);
-}
-function $$(id){return document.getElementById(id);}
-function fmt$(n){return n?'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0}):'$0';}
-function fmtD(d){return d?new Date(d).toLocaleDateString('en-US'):'—';}
-function dAgo(d){if(!d)return'?';const x=Math.floor((Date.now()-new Date(d))/86400000);return x===0?'today':x+'d ago';}
-function phases(){return['Pre-Construction','Demo','Foundation','Framing','Roofing','Rough MEP','Insulation','Drywall','Finish Carpentry','Tile','Paint','Finish MEP','Cabinets & Counters','Punch List','Complete'];}
-
+// ── NAV & ROUTING ─────────────────────────────────────────────
 function go(page,jobId=null){
   CUR=page;if(jobId)JOB=jobId;
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes(`'${page}'`))n.classList.add('active');});
-  $$('ts').textContent='Updated '+new Date().toLocaleTimeString();
-  const T={dashboard:'Command Center',sales:'Sales Pipeline',jobs:'Jobs',pm:'Project Management',financial:'Financial',subs:'Subcontractors',files:'Files & Media',messages:'Messaging',gatekeeper:'Gatekeeper Queue',reports:'Reports',settings:'Settings'};
-  $$('page-title').textContent=T[page]||page;
+  // Update top nav active state
+  document.querySelectorAll('.top-nav-item').forEach(n=>n.classList.remove('active'));
+  const navEl=$$(`nav-${page}`);if(navEl)navEl.classList.add('active');
+  // Show/hide content tabs bar depending on page
+  const tabsBar=$$('content-tabs-bar');
+  if(['pm','financial'].includes(page)){
+    tabsBar.style.display='flex';
+  } else {
+    tabsBar.style.display='none';
+  }
   renderPage(page);
+  // Highlight active job in sidebar
+  document.querySelectorAll('.js-item').forEach(i=>i.classList.remove('active'));
+  if(JOB){const el=$$(`js-${JOB}`);if(el)el.classList.add('active');}
 }
+
 function renderPage(p){
   $$('content').innerHTML='<div class="loading"><div class="spinner"></div>Loading...</div>';
   ({dashboard:pgDash,sales:pgSales,jobs:pgJobs,pm:pgPM,financial:pgFin,subs:pgSubs,files:pgFiles,messages:pgMsgs,gatekeeper:pgGK,reports:pgReports,settings:pgSettings}[p]||pgNotFound)();
 }
+
+// ── JOB SIDEBAR ───────────────────────────────────────────────
+async function loadJobSidebar(){
+  try{
+    const[jobs,leads]=await Promise.all([
+      sb('jobs','?order=created_at.desc&select=id,job_name,client_name,status,percent_complete,address'),
+      sb('leads','?select=id,client_name,stage&stage=neq.signed&stage=neq.lost&order=created_at.desc&limit=5')
+    ]);
+    allJobs=jobs;
+    renderJobSidebar(jobs,leads);
+  }catch(e){$$('js-list').innerHTML='<div style="padding:12px;font-size:12px;color:var(--dim)">Error loading jobs</div>';}
+}
+
+function renderJobSidebar(jobs,leads=[]){
+  const activeJobs=jobs.filter(j=>j.status==='active');
+  const otherJobs=jobs.filter(j=>j.status!=='active');
+  let html='';
+  if(leads.length>0){
+    html+=`<div class="js-section">🔥 Active Leads</div>`;
+    html+=leads.slice(0,4).map(l=>`
+      <div class="js-item" onclick="go('sales')" style="border-left-color:var(--amber)">
+        <div class="js-name" style="font-size:12px">${l.client_name}</div>
+        <div class="js-sub"><span class="badge badge-${l.stage}" style="font-size:9px">${l.stage}</span></div>
+      </div>`).join('');
+  }
+  if(activeJobs.length>0){
+    html+=`<div class="js-section">🏗️ Active Jobs (${activeJobs.length})</div>`;
+    html+=activeJobs.map(j=>`
+      <div class="js-item ${JOB===j.id?'active':''}" id="js-${j.id}" onclick="selectJob('${j.id}')">
+        <div class="js-name">${j.job_name}</div>
+        <div class="js-sub">${j.client_name}</div>
+        <div style="margin-top:5px">
+          <div class="progress-bar" style="height:3px"><div class="progress-fill" style="width:${j.percent_complete||0}%"></div></div>
+          <div style="font-size:10px;color:var(--dim);margin-top:2px">${j.percent_complete||0}% complete</div>
+        </div>
+      </div>`).join('');
+  }
+  if(otherJobs.length>0){
+    html+=`<div class="js-section" style="margin-top:8px">📁 Other Jobs (${otherJobs.length})</div>`;
+    html+=otherJobs.map(j=>`
+      <div class="js-item ${JOB===j.id?'active':''}" id="js-${j.id}" onclick="selectJob('${j.id}')">
+        <div class="js-name">${j.job_name}</div>
+        <div class="js-sub">${j.client_name} · <span class="badge badge-${j.status}" style="font-size:9px">${j.status}</span></div>
+      </div>`).join('');
+  }
+  if(jobs.length===0&&leads.length===0){
+    html='<div style="padding:20px;text-align:center;font-size:12px;color:var(--dim)">No jobs yet.<br>Create one below.</div>';
+  }
+  $$('js-list').innerHTML=html;
+}
+
+function filterJobSidebar(query){
+  if(!query.trim()){loadJobSidebar();return;}
+  const q=query.toLowerCase();
+  const filtered=allJobs.filter(j=>j.job_name?.toLowerCase().includes(q)||j.client_name?.toLowerCase().includes(q)||j.address?.toLowerCase().includes(q));
+  $$('js-list').innerHTML=filtered.length===0?
+    `<div style="padding:16px;text-align:center;font-size:12px;color:var(--dim)">No results for "${query}"</div>`:
+    filtered.map(j=>`
+      <div class="js-item ${JOB===j.id?'active':''}" id="js-${j.id}" onclick="selectJob('${j.id}')">
+        <div class="js-name">${j.job_name}</div>
+        <div class="js-sub">${j.client_name}</div>
+        <span class="badge badge-${j.status}" style="font-size:9px;margin-top:4px">${j.status}</span>
+      </div>`).join('');
+}
+
+function selectJob(jobId){
+  JOB=jobId;
+  // Remove active from all sidebar items
+  document.querySelectorAll('.js-item').forEach(i=>i.classList.remove('active'));
+  const el=$$(`js-${jobId}`);if(el)el.classList.add('active');
+  // Go to project management for this job
+  go('pm',jobId);
+}
+
+// ── GLOBAL SEARCH ─────────────────────────────────────────────
+let searchTimeout=null;
+async function globalSearch(query){
+  const resultsEl=$$('search-results');
+  if(!query||query.length<2){resultsEl.style.display='none';return;}
+  clearTimeout(searchTimeout);
+  searchTimeout=setTimeout(async()=>{
+    try{
+      const[jobs,leads,clients]=await Promise.all([
+        sb('jobs',`?or=(job_name.ilike.*${query}*,client_name.ilike.*${query}*,address.ilike.*${query}*)&limit=5`),
+        sb('leads',`?or=(client_name.ilike.*${query}*,address.ilike.*${query}*,phone.ilike.*${query}*)&limit=5`),
+        sb('invoices',`?invoice_number=ilike.*${query}*&limit=3`)
+      ]);
+      let html='';
+      if(jobs.length>0){
+        html+=`<div style="padding:8px 14px;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;background:#f8fafc;border-bottom:1px solid var(--border)">Jobs</div>`;
+        html+=jobs.map(j=>`<div onclick="selectJob('${j.id}');$$('search-results').style.display='none';$$('global-search').value=''" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">`+
+          `<div style="font-weight:600;font-size:13px">${j.job_name}</div><div style="font-size:11px;color:var(--dim)">${j.client_name} · <span class="badge badge-${j.status}">${j.status}</span></div></div>`).join('');
+      }
+      if(leads.length>0){
+        html+=`<div style="padding:8px 14px;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;background:#f8fafc;border-bottom:1px solid var(--border)">Leads</div>`;
+        html+=leads.map(l=>`<div onclick="go('sales');setTimeout(()=>leadDetail('${l.id}'),500);$$('search-results').style.display='none';$$('global-search').value=''" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">`+
+          `<div style="font-weight:600;font-size:13px">${l.client_name}</div><div style="font-size:11px;color:var(--dim)">${l.phone||''} · <span class="badge badge-${l.stage}">${l.stage}</span></div></div>`).join('');
+      }
+      if(!html)html='<div style="padding:16px;text-align:center;font-size:13px;color:var(--dim)">No results found</div>';
+      resultsEl.innerHTML=html;
+      resultsEl.style.display='block';
+    }catch(e){}
+  },300);
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#global-search')&&!e.target.closest('#search-results'))$$('search-results').style.display='none';});
 
 // DASHBOARD
 async function pgDash(){
@@ -1123,7 +1246,7 @@ async function saveJob(){
   if(!name||!client){toast('Name and client required','error');return;}
   try{
     await ins('jobs',{job_name:name,client_name:client,status:$$('j-status').value,address:$$('j-addr').value,budget:parseFloat($$('j-budget').value)||0,start_date:$$('j-start').value,current_phase:$$('j-phase').value,percent_complete:0});
-    toast('Job created!');$$('jf').remove();pgJobs();
+    toast('Job created!');$$('jf').remove();loadJobSidebar();pgJobs();
   }catch(e){toast(e.message,'error');}
 }
 
@@ -2012,6 +2135,7 @@ function saveSettings(){
 function pgNotFound(){$$('content').innerHTML='<div class="empty"><div class="empty-icon">🚧</div><div class="empty-title">Coming Soon</div></div>';}
 
 checkGmailCallback();
+loadJobSidebar();
 go('dashboard');
 </script>
 </body>
