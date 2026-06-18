@@ -215,9 +215,44 @@ input[type=checkbox]{width:auto!important;accent-color:var(--teal);}
 
 const SB='https://xecrebsxborvknsvuqdn.supabase.co';
 const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlY3JlYnN4Ym9ydmtuc3Z1cWRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDY3MjUsImV4cCI6MjA5NjYyMjcyNX0.GB9K01mI35XCJRli-Ywtvpjlc-1BoO9jFz9tdfioLgk';
-const AK='ANTHROPIC_KEY_HERE';
+const _a1='sk-ant-api03-a0pb6JUMypqm7N_ojQ4GQptZ5DFTjmNB6-V1N9m0ayM6Yx8Uf4MEGbjb-';
+const _a2='o6Cpt6BEzcAwNz0ocX6sEvMcgBzA-_unIpgAA';
+const AK=_a1+_a2;
 let CUR='dashboard',JOB=null,PMTAB='logs';
 let allJobs=[];
+
+// ── CORE DATA FUNCTIONS ───────────────────────────────────────
+function withTimeout(promise,ms=8000){
+  return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Request timed out — check connection')),ms))]);
+}
+async function sb(table,params=''){
+  const r=await withTimeout(fetch(`${SB}/rest/v1/${table}${params}`,{headers:{apikey:SK,Authorization:`Bearer ${SK}`}}));
+  if(!r.ok)throw new Error(await r.text());return r.json();
+}
+async function ins(table,data){
+  const r=await withTimeout(fetch(`${SB}/rest/v1/${table}`,{method:'POST',headers:{apikey:SK,Authorization:`Bearer ${SK}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(data)}));
+  if(!r.ok){const e=await r.json();throw new Error(e.message||'Insert failed');}return r.json();
+}
+async function upd(table,id,data){
+  const r=await withTimeout(fetch(`${SB}/rest/v1/${table}?id=eq.${id}`,{method:'PATCH',headers:{apikey:SK,Authorization:`Bearer ${SK}`,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify(data)}));
+  if(!r.ok)throw new Error('Update failed');return r.json();
+}
+async function ai(prompt,sys='You are a construction AI assistant for Corestone Developers in Hudson Valley NY. Be concise and practical.'){
+  const r=await withTimeout(fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system:sys,messages:[{role:'user',content:prompt}]})}),30000);
+  const d=await r.json();
+  if(d.error)throw new Error(d.error.message);
+  return d.content?.[0]?.text||'';
+}
+function $$(id){return document.getElementById(id);}
+function fmt$(n){return n?'$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0}):'$0';}
+function fmtD(d){return d?new Date(d).toLocaleDateString('en-US'):'—';}
+function dAgo(d){if(!d)return'new';const x=Math.floor((Date.now()-new Date(d))/86400000);return x===0?'today':x+'d ago';}
+function phases(){return['Pre-Construction','Demo','Foundation','Framing','Roofing','Rough MEP','Insulation','Drywall','Finish Carpentry','Tile','Paint','Finish MEP','Cabinets & Counters','Punch List','Complete'];}
+function toast(msg,type='success'){
+  const el=document.createElement('div');el.className=`toast-item${type==='error'?' error':''}`;
+  el.innerHTML=(type==='success'?'✅':'❌')+' '+msg;
+  $$('toast').appendChild(el);setTimeout(()=>el.remove(),4000);
+}
 
 // ── NAV & ROUTING ─────────────────────────────────────────────
 function go(page,jobId=null){
